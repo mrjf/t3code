@@ -1713,7 +1713,7 @@ html[data-theme-id="t3-chat"] [data-app-sidebar] {
 body {
   /* Reference the theme token (not a literal stack) so the Settings ->
      Appearance runtime override of --font-sans reaches all interface text. */
-  font-family: var(--project-font-sans, var(--font-sans));
+  font-family: var(--font-sans);
   margin: 0;
   padding: 0;
 }

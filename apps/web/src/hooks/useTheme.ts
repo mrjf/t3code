@@ -4,8 +4,10 @@ import { safeErrorLogAttributes } from "@t3tools/client-runtime/errors";
 import * as Schema from "effect/Schema";
 import { useSyncExternalStore } from "react";
 import {
+  applyThemeDefinitionPalette,
   applyThemePalette,
   CUSTOM_THEMES_STORAGE_KEY,
+  getThemeColorsForMode,
   invalidateCustomThemes,
   canonicalThemePreference,
   isKnownThemePreference,
@@ -22,6 +24,7 @@ import {
   THEME_HALVES_STORAGE_KEY,
   ThemePreference,
   type ThemeAppearance,
+  type ThemeDefinition,
   type ThemeHalves,
   type ThemePreferenceMode,
 } from "../themePalette";
@@ -129,6 +132,8 @@ let snapshotStale = true;
 let lastDesktopTheme: "light" | "dark" | "system" | null = null;
 let lastAppliedTheme: Omit<ThemeSnapshot, "resolvedTheme"> | null = null;
 let themeStorageReadFailure: ThemeStorageError | null = null;
+// The open project's theme, painted in place of the user's without changing their preference.
+let projectTheme: ThemeDefinition | null = null;
 
 function emitChange() {
   snapshotStale = true;
@@ -333,8 +338,17 @@ function applyTheme(theme: Theme, { suppressTransitions = false, preservePreview
     appearanceMode,
     themeHalves,
   );
-  applyThemePalette(resolveThemeHalf(theme, themeHalves, resolvedAppearance), resolvedAppearance);
-  document.documentElement.classList.toggle("dark", resolvedAppearance === "dark");
+  // A project theme without this appearance keeps its own, so its colors match the dark class.
+  const paintedAppearance =
+    projectTheme && !getThemeColorsForMode(projectTheme, resolvedAppearance)
+      ? projectTheme.appearance
+      : resolvedAppearance;
+  if (projectTheme) {
+    applyThemeDefinitionPalette(projectTheme, paintedAppearance);
+  } else {
+    applyThemePalette(resolveThemeHalf(theme, themeHalves, resolvedAppearance), resolvedAppearance);
+  }
+  document.documentElement.classList.toggle("dark", paintedAppearance === "dark");
   lastAppliedTheme = { theme, systemDark, followSystem, appearanceMode, themeHalves };
   syncBrowserChromeTheme();
   syncDesktopTheme(theme, followSystem, appearanceMode);
@@ -630,6 +644,16 @@ function clearThemeHalves(): boolean {
   applyTheme(getStored(), { suppressTransitions: true });
   emitChange();
   return true;
+}
+
+/** Paints a project's theme over the user's until called with null; their preference is untouched. */
+export function setProjectTheme(theme: ThemeDefinition | null): void {
+  if (projectTheme === theme) return;
+  projectTheme = theme;
+  if (typeof window === "undefined") return;
+  lastAppliedTheme = null;
+  applyTheme(getStored(), { suppressTransitions: true });
+  emitChange();
 }
 
 export function refreshTheme({ preservePreview = false } = {}): void {

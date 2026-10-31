@@ -2,16 +2,14 @@ import type { T3ProjectFileAppearance } from "@t3tools/contracts";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
 import * as Schema from "effect/Schema";
 
-import { appearanceFontStack } from "./appearanceFonts";
+import type { ProjectFonts } from "./appearanceFonts";
 import { useLocalStorage } from "./hooks/useLocalStorage";
-import { refreshTheme } from "./hooks/useTheme";
 import {
-  applyThemeColorPreview,
   getCustomThemes,
-  getThemeColorsForMode,
   getThemeDefinition,
+  parseThemeFile,
   type ThemeAppearance,
-  type ThemeColors,
+  type ThemeDefinition,
 } from "./themePalette";
 
 const PROJECT_THEMES_STORAGE_KEY = "t3code:project-themes:v1";
@@ -50,6 +48,26 @@ export function projectThemeOptions(): ReadonlyArray<{ id: string; label: string
   }));
 }
 
+/** A theme file the repository ships, in the format Settings → Appearance exports. */
+export function parseProjectThemeFile(contents: string | null): ThemeDefinition | null {
+  if (contents === null) return null;
+  try {
+    return parseThemeFile(JSON.parse(contents));
+  } catch {
+    return null;
+  }
+}
+
+export interface ProjectLayers {
+  /** Painted in place of the user's theme. */
+  readonly theme: ThemeDefinition | null;
+  /** Without a theme file: background and accent over the user's own theme. */
+  readonly tint: Readonly<Record<string, string>> | null;
+  readonly fonts: ProjectFonts | null;
+}
+
+const NO_PROJECT_LAYERS: ProjectLayers = { theme: null, tint: null, fonts: null };
+
 function readableOn(hex: string): string {
   const [r = 0, g = 0, b = 0] = [1, 3, 5].map((index) =>
     Number.parseInt(hex.slice(index, index + 2), 16),
@@ -57,72 +75,58 @@ function readableOn(hex: string): string {
   return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#111111" : "#ffffff";
 }
 
-// index.css sets body text from this, falling back to the user's --font-sans.
-const PROJECT_FONT_VARIABLE = "--project-font-sans";
-
-export type ProjectLook =
-  | { readonly kind: "palette"; readonly colors: ThemeColors; readonly appearance: ThemeAppearance }
-  | { readonly kind: "tint"; readonly variables: Readonly<Record<string, string>> };
-
-/** A chosen theme replaces the palette; the project's own look tints the user's theme. */
-export function resolveProjectLook(input: {
+/** What the choice paints: a chosen theme alone, or the project's theme or tint plus its fonts. */
+export function resolveProjectLayers(input: {
   choice: ProjectThemeChoice;
   projectAppearance: T3ProjectFileAppearance | null;
+  projectTheme: ThemeDefinition | null;
   appearance: ThemeAppearance;
-}): ProjectLook | null {
-  const { choice, projectAppearance, appearance } = input;
-  if (choice === "none") return null;
+}): ProjectLayers {
+  const { choice, projectAppearance, projectTheme, appearance } = input;
+  if (choice === "none") return NO_PROJECT_LAYERS;
   if (choice !== "project") {
-    const theme = getThemeDefinition(choice);
-    if (!theme) return null;
-    const colors = getThemeColorsForMode(theme, appearance);
-    return colors
-      ? { kind: "palette", colors, appearance }
-      : { kind: "palette", colors: theme.colors, appearance: theme.appearance };
+    return { ...NO_PROJECT_LAYERS, theme: getThemeDefinition(choice) };
   }
-  if (!projectAppearance) return null;
-  const variables: Record<string, string> = {};
+  if (!projectAppearance) return NO_PROJECT_LAYERS;
   const brand = projectAppearance[appearance];
-  if (brand) {
-    for (const name of [
-      "--background",
-      "--app-chrome-background",
-      "--toolbar-background",
-      "--sidebar",
-    ]) {
-      variables[name] = brand.background;
-    }
-    variables["--primary"] = brand.accent;
-    variables["--primary-foreground"] = readableOn(brand.accent);
-    variables["--ring"] = brand.accent;
-  }
-  if (projectAppearance.font) {
-    variables[PROJECT_FONT_VARIABLE] = appearanceFontStack(
-      projectAppearance.font,
-      "var(--font-sans)",
-    );
-  }
-  return Object.keys(variables).length > 0 ? { kind: "tint", variables } : null;
+  const tint =
+    projectTheme === null && brand
+      ? {
+          "--background": brand.background,
+          "--app-chrome-background": brand.background,
+          "--toolbar-background": brand.background,
+          "--sidebar": brand.background,
+          "--primary": brand.accent,
+          "--primary-foreground": readableOn(brand.accent),
+          "--ring": brand.accent,
+        }
+      : null;
+  return { theme: projectTheme, tint, fonts: projectAppearance.fonts ?? null };
 }
 
-/** Paints the look onto the document root and returns how to undo it. */
-export function applyProjectLook(look: ProjectLook): () => void {
-  if (look.kind === "palette") {
-    applyThemeColorPreview(look.colors, look.appearance);
-    return () => refreshTheme();
-  }
-  // Inline styles outrank the stylesheet's theme selectors without touching the user's theme.
+/** Sets the tint inline, where it outranks the stylesheet's theme selectors, and returns its undo. */
+export function applyProjectTint(tint: Readonly<Record<string, string>>): () => void {
   const style = document.documentElement.style;
-  for (const [name, value] of Object.entries(look.variables)) style.setProperty(name, value);
+  for (const [name, value] of Object.entries(tint)) style.setProperty(name, value);
   return () => {
-    for (const name of Object.keys(look.variables)) style.removeProperty(name);
+    for (const name of Object.keys(tint)) style.removeProperty(name);
   };
 }
 
-/** A light wallpaper would leave light-on-light text in dark appearance, so it only shows in light. */
-export function showsProjectWallpaper(
-  tone: T3ProjectFileAppearance["wallpaperTone"],
+/**
+ * The wallpaper for this appearance. A single wallpaper declares its tone, and a light one would
+ * leave light-on-light text in dark appearance, so it only shows in light.
+ */
+export function resolveProjectWallpaper(
+  projectAppearance: T3ProjectFileAppearance | null,
   appearance: ThemeAppearance,
-): boolean {
-  return tone === "dark" || appearance === "light";
+): { readonly path: string; readonly dark: boolean } | null {
+  const wallpaper = projectAppearance?.wallpaper;
+  if (wallpaper === undefined) return null;
+  if (typeof wallpaper !== "string") {
+    const path = wallpaper[appearance];
+    return path ? { path, dark: appearance === "dark" } : null;
+  }
+  const dark = projectAppearance?.wallpaperTone === "dark";
+  return dark || appearance === "light" ? { path: wallpaper, dark } : null;
 }

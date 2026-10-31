@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
-  resolveProjectLook,
+  parseProjectThemeFile,
+  resolveProjectLayers,
   resolveProjectThemeChoice,
-  showsProjectWallpaper,
+  resolveProjectWallpaper,
 } from "./projectTheme";
 
-const appearance = {
-  font: "Inter",
+const tinted = {
+  fonts: { interface: "Inter" },
   light: { background: "#f6f7fb", accent: "#2f5bea" },
 };
+const themeFile = parseProjectThemeFile(
+  JSON.stringify({ version: 1, name: "Bands", appearance: "dark", colors: { accent: "#e8431a" } }),
+);
 
 describe("resolveProjectThemeChoice", () => {
   it.each([
@@ -22,49 +26,93 @@ describe("resolveProjectThemeChoice", () => {
   });
 });
 
-describe("resolveProjectLook", () => {
-  it("tints the user's theme with the project's colors and font", () => {
-    const look = resolveProjectLook({
-      choice: "project",
-      projectAppearance: appearance,
-      appearance: "light",
+describe("parseProjectThemeFile", () => {
+  it("reads an exported theme file and ignores anything else", () => {
+    expect(themeFile?.label).toBe("Bands");
+    expect(parseProjectThemeFile("{ not json")).toBeNull();
+    expect(parseProjectThemeFile(JSON.stringify({ version: 1, name: "x" }))).toBeNull();
+  });
+});
+
+describe("resolveProjectLayers", () => {
+  const layers = (
+    choice: string,
+    projectTheme = themeFile,
+    projectAppearance: Parameters<typeof resolveProjectLayers>[0]["projectAppearance"] = tinted,
+  ) => resolveProjectLayers({ choice, projectAppearance, projectTheme, appearance: "light" });
+
+  it("paints the project's theme file and fonts, with no tint", () => {
+    expect(layers("project")).toEqual({
+      theme: themeFile,
+      tint: null,
+      fonts: { interface: "Inter" },
     });
-    expect(look?.kind).toBe("tint");
-    expect(look?.kind === "tint" ? look.variables : null).toMatchObject({
+  });
+
+  it("tints the user's theme when the project has colors but no theme file", () => {
+    expect(layers("project", null).tint).toMatchObject({
       "--background": "#f6f7fb",
       "--primary": "#2f5bea",
       "--primary-foreground": "#ffffff",
     });
   });
 
-  it("keeps only the font when the project has no colors for this appearance", () => {
-    const look = resolveProjectLook({
-      choice: "project",
-      projectAppearance: appearance,
-      appearance: "dark",
-    });
-    expect(look?.kind === "tint" ? Object.keys(look.variables) : null).toEqual([
-      "--project-font-sans",
-    ]);
+  it("uses a theme chosen for the project without the project's fonts", () => {
+    expect(layers("ocean")).toMatchObject({ tint: null, fonts: null });
+    expect(layers("ocean").theme?.id).toBe("ocean");
   });
 
   it.each([
-    ["the user's theme", "none", appearance],
+    ["the user's theme", "none", tinted],
     ["a project without a look", "project", null],
-    ["an unknown theme", "missing-theme", appearance],
-  ] as const)("returns nothing for %s", (_name, choice, projectAppearance) => {
-    expect(resolveProjectLook({ choice, projectAppearance, appearance: "light" })).toBeNull();
+  ] as const)("paints nothing for %s", (_name, choice, projectAppearance) => {
+    expect(layers(choice, null, projectAppearance)).toEqual({
+      theme: null,
+      tint: null,
+      fonts: null,
+    });
   });
 });
 
-describe("showsProjectWallpaper", () => {
+describe("resolveProjectWallpaper", () => {
   it.each([
-    ["dark", "dark", true],
-    ["dark", "light", true],
-    ["light", "light", true],
-    ["light", "dark", false],
-    [undefined, "dark", false],
-  ] as const)("a %s wallpaper in %s appearance: %s", (tone, mode, expected) => {
-    expect(showsProjectWallpaper(tone, mode)).toBe(expected);
+    [
+      "a dark single wallpaper in light",
+      "art.svg",
+      "dark",
+      "light",
+      { path: "art.svg", dark: true },
+    ],
+    ["a dark single wallpaper in dark", "art.svg", "dark", "dark", { path: "art.svg", dark: true }],
+    [
+      "a light single wallpaper in light",
+      "art.svg",
+      "light",
+      "light",
+      { path: "art.svg", dark: false },
+    ],
+    ["no light single wallpaper in dark", "art.svg", undefined, "dark", null],
+    [
+      "the light wallpaper in light",
+      { light: "day.svg", dark: "night.svg" },
+      undefined,
+      "light",
+      { path: "day.svg", dark: false },
+    ],
+    [
+      "the dark wallpaper in dark",
+      { light: "day.svg", dark: "night.svg" },
+      undefined,
+      "dark",
+      { path: "night.svg", dark: true },
+    ],
+    ["nothing for a missing mode", { light: "day.svg" }, undefined, "dark", null],
+  ] as const)("shows %s", (_name, wallpaper, wallpaperTone, appearance, expected) => {
+    expect(
+      resolveProjectWallpaper(
+        { wallpaper, ...(wallpaperTone ? { wallpaperTone } : {}) },
+        appearance,
+      ),
+    ).toEqual(expected);
   });
 });

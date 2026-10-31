@@ -30,22 +30,24 @@ describe("parseT3ProjectFile", () => {
     ).toEqual({ defaultThreadEnvMode: "worktree" });
   });
 
-  it("reads an appearance and keeps artwork inside the repository", () => {
-    const appearance = (wallpaper: string) =>
+  it("reads an appearance and keeps its files inside the repository", () => {
+    const appearance = (wallpaper: unknown, theme = "assets/theme.json") =>
       parseT3ProjectFile(`{
         // brand
         "appearance": {
-          "font": "Inter, sans-serif",
+          "theme": ${JSON.stringify(theme)},
+          "fonts": { "interface": "Inter, sans-serif", "code": "Berkeley Mono" },
           "light": { "background": "#f6f7fb", "accent": "#2f5bea" },
           "wallpaper": ${JSON.stringify(wallpaper)},
           "wallpaperTone": "dark",
         },
       }`)?.appearance;
 
-    expect(appearance("assets/wallpaper.svg")).toEqual({
-      font: "Inter, sans-serif",
+    expect(appearance({ light: "assets/day.svg", dark: "assets/night.svg" })).toEqual({
+      theme: "assets/theme.json",
+      fonts: { interface: "Inter, sans-serif", code: "Berkeley Mono" },
       light: { background: "#f6f7fb", accent: "#2f5bea" },
-      wallpaper: "assets/wallpaper.svg",
+      wallpaper: { light: "assets/day.svg", dark: "assets/night.svg" },
       wallpaperTone: "dark",
     });
     for (const outside of [
@@ -56,8 +58,10 @@ describe("parseT3ProjectFile", () => {
       "C:/art.svg",
       "assets\\art.svg",
       "assets/wallpaper.png",
+      { dark: "/etc/night.svg" },
     ]) {
       expect(appearance(outside)).toBeUndefined();
     }
+    expect(appearance("assets/wallpaper.svg", "../theme.json")).toBeUndefined();
   });
 });

@@ -70,6 +70,30 @@ export interface AppearanceFontPreferences {
 }
 
 /** Interface size sets the root; prompt and code use pixels to avoid double scaling. */
+export interface ProjectFonts {
+  readonly interface?: string;
+  readonly code?: string;
+}
+
+let projectFonts: ProjectFonts | null = null;
+const projectFontListeners = new Set<() => void>();
+
+/** The open project's fonts replace the user's font families until set back to null. */
+export function setProjectFonts(fonts: ProjectFonts | null): void {
+  if (projectFonts === fonts) return;
+  projectFonts = fonts;
+  for (const listener of projectFontListeners) listener();
+}
+
+export function getProjectFonts(): ProjectFonts | null {
+  return projectFonts;
+}
+
+export function subscribeProjectFonts(listener: () => void): () => void {
+  projectFontListeners.add(listener);
+  return () => projectFontListeners.delete(listener);
+}
+
 export function applyAppearanceFontVariables(
   root: HTMLElement,
   preferences: AppearanceFontPreferences,

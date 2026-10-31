@@ -5,12 +5,14 @@ import { createContext, useContext, useEffect, type ReactNode } from "react";
 
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { useT3ProjectFileState } from "../hooks/useT3ProjectFileScripts";
-import { useTheme } from "../hooks/useTheme";
+import { setProjectFonts, type ProjectFonts } from "../appearanceFonts";
+import { setProjectTheme, useTheme } from "../hooks/useTheme";
 import {
-  applyProjectLook,
-  resolveProjectLook,
+  applyProjectTint,
+  parseProjectThemeFile,
+  resolveProjectLayers,
   resolveProjectThemeChoice,
-  showsProjectWallpaper,
+  resolveProjectWallpaper,
   useProjectThemeChoices,
 } from "../projectTheme";
 import { useUiStateStore } from "../uiStateStore";
@@ -48,10 +50,9 @@ function svgDataUrl(contents: string | null): string | null {
     : null;
 }
 
-function useProjectSvg(environmentId: EnvironmentId, cwd: string, path: string | null) {
+function useProjectFileText(environmentId: EnvironmentId, cwd: string, path: string | null) {
   const query = useProjectFileQuery(environmentId, cwd, path, path !== null);
-  const contents = query.data && !query.data.truncated ? query.data.contents : null;
-  return svgDataUrl(contents);
+  return query.data && !query.data.truncated ? query.data.contents : null;
 }
 
 /** Applies the scoped project's look app-wide; lives above the sidebar so the mobile sheet can close. */
@@ -67,44 +68,65 @@ export function ProjectLookProvider({ children }: { children: ReactNode }) {
   const projectFile = useT3ProjectFileState(environmentId, project?.workspaceRoot ?? null);
   const projectAppearance = projectFile.file?.appearance ?? null;
   const [choices] = useProjectThemeChoices();
-  const { theme: userTheme, resolvedTheme: appearance } = useTheme();
-  // The theme editor previews on the same root variables, so a project look would hide its edits.
+  const { resolvedTheme: appearance } = useTheme();
+  // Settings shows the user's own theme and fonts, which the theme editor and font pickers edit.
   const onSettings = useLocation({
     select: (location) => location.pathname.startsWith("/settings"),
   });
-  const choice = project
-    ? resolveProjectThemeChoice(project.projectKey, projectAppearance !== null, choices)
-    : "none";
-  const look = onSettings ? null : resolveProjectLook({ choice, projectAppearance, appearance });
-  const lookKey = look ? JSON.stringify([look, userTheme]) : null;
+  const choice =
+    project && !onSettings
+      ? resolveProjectThemeChoice(project.projectKey, projectAppearance !== null, choices)
+      : "none";
+  const usesProjectLook = choice === "project";
 
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- paints the project's look onto the document root and restores the user's theme after
+  const themeFileText = useProjectFileText(
+    environmentId,
+    cwd,
+    usesProjectLook ? (projectAppearance?.theme ?? null) : null,
+  );
+  const projectTheme = parseProjectThemeFile(themeFileText);
+  const layers = resolveProjectLayers({ choice, projectAppearance, projectTheme, appearance });
+
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- hands the project's theme to the theme system, which paints the document root
   useEffect(() => {
-    if (lookKey === null) return;
-    const [nextLook] = JSON.parse(lookKey) as [NonNullable<typeof look>, string];
-    return applyProjectLook(nextLook);
-  }, [lookKey]);
+    if (!layers.theme) return;
+    setProjectTheme(layers.theme);
+    return () => setProjectTheme(null);
+  }, [layers.theme]);
 
-  const usesProjectArtwork = project !== null && choice === "project";
-  const wallpaperShown =
-    usesProjectArtwork && showsProjectWallpaper(projectAppearance?.wallpaperTone, appearance);
-  const wallpaper = useProjectSvg(
+  const fontsKey = layers.fonts ? JSON.stringify(layers.fonts) : null;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- hands the project's fonts to the appearance settings, which set the root font variables
+  useEffect(() => {
+    if (fontsKey === null) return;
+    setProjectFonts(JSON.parse(fontsKey) as ProjectFonts);
+    return () => setProjectFonts(null);
+  }, [fontsKey]);
+
+  const tintKey = layers.tint ? JSON.stringify(layers.tint) : null;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- sets the project's tint on the document root and removes it after
+  useEffect(() => {
+    if (tintKey === null) return;
+    return applyProjectTint(JSON.parse(tintKey) as Record<string, string>);
+  }, [tintKey]);
+
+  const wallpaperChoice = usesProjectLook
+    ? resolveProjectWallpaper(projectAppearance, appearance)
+    : null;
+  const wallpaperText = useProjectFileText(environmentId, cwd, wallpaperChoice?.path ?? null);
+  const mascotText = useProjectFileText(
     environmentId,
     cwd,
-    wallpaperShown ? (projectAppearance?.wallpaper ?? null) : null,
+    usesProjectLook ? (projectAppearance?.mascot ?? null) : null,
   );
-  const mascot = useProjectSvg(
-    environmentId,
-    cwd,
-    usesProjectArtwork ? (projectAppearance?.mascot ?? null) : null,
-  );
+  const wallpaper = svgDataUrl(wallpaperText);
+  const mascot = svgDataUrl(mascotText);
 
   const value: ActiveProjectLook = project
     ? {
         projectKey: project.projectKey,
         hasProjectLook: projectAppearance !== null,
         wallpaper,
-        wallpaperDark: projectAppearance?.wallpaperTone === "dark",
+        wallpaperDark: wallpaperChoice?.dark ?? false,
         mascot,
       }
     : NO_PROJECT_LOOK;

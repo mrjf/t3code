@@ -4,7 +4,13 @@ import { createBrowserHistory, createHashHistory } from "@tanstack/react-router"
 import * as Schema from "effect/Schema";
 
 import { applyAppearanceContrast } from "./appearanceContrast";
-import { applyAppearanceFontVariables, TYPOGRAPHY_ADVANCED_STORAGE_KEY } from "./appearanceFonts";
+import {
+  applyAppearanceFontVariables,
+  getProjectFonts,
+  subscribeProjectFonts,
+  TYPOGRAPHY_ADVANCED_STORAGE_KEY,
+  type ProjectFonts,
+} from "./appearanceFonts";
 import { startElectronBrowserHost } from "./browser/ElectronBrowserHost";
 import { startBrowserProfileReporting } from "./browser/BrowserProfileReporter";
 import { startPreviewTitleRecording } from "./browserHistoryStore";
@@ -61,6 +67,7 @@ function startClientAppearance(): void {
   const root = document.documentElement;
   let applied: ClientSettings | null = null;
   let appliedSeparateFonts: boolean | null = null;
+  let appliedProjectFonts: ProjectFonts | null = null;
   const apply = () => {
     const settings = getClientSettings();
     const previous = applied;
@@ -72,6 +79,9 @@ function startClientAppearance(): void {
     );
     const previousSeparateFonts = appliedSeparateFonts;
     appliedSeparateFonts = separateFonts;
+    const fonts = getProjectFonts();
+    const previousProjectFonts = appliedProjectFonts;
+    appliedProjectFonts = fonts;
     if (previous?.diffColorScheme !== settings.diffColorScheme) {
       root.dataset.diffColorScheme = settings.diffColorScheme;
     }
@@ -97,11 +107,12 @@ function startClientAppearance(): void {
       previous.fontSizePrompt !== settings.fontSizePrompt ||
       previous.fontSizeCode !== settings.fontSizeCode ||
       previous.fontSmoothing !== settings.fontSmoothing ||
-      previousSeparateFonts !== separateFonts
+      previousSeparateFonts !== separateFonts ||
+      previousProjectFonts !== fonts
     ) {
       applyAppearanceFontVariables(root, {
-        sans: settings.fontFamilySans,
-        code: settings.fontFamilyCode,
+        sans: fonts?.interface ?? settings.fontFamilySans,
+        code: fonts?.code ?? settings.fontFamilyCode,
         composer: settings.fontFamilyComposer,
         sizeInterface: settings.fontSizeInterface,
         sizePrompt: settings.fontSizePrompt,
@@ -113,6 +124,7 @@ function startClientAppearance(): void {
   };
   subscribeClientSettings(apply);
   subscribeLocalStorageKey(TYPOGRAPHY_ADVANCED_STORAGE_KEY, apply);
+  subscribeProjectFonts(apply);
   apply();
 }
 

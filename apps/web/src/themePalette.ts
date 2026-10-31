@@ -1618,13 +1618,7 @@ export function applyThemePalette(theme: ThemePreference, appearance?: ThemeAppe
   const palette = getThemeDefinition(theme);
 
   if (palette) {
-    root.dataset.themeId = palette.id;
-    const mode = appearance ?? legacyThemeMode(theme) ?? palette.appearance;
-    const colors = getThemeColorsForMode(palette, mode) ?? palette.colors;
-    for (const [role, value] of Object.entries(colors) as Array<[ThemeColorRole, string]>) {
-      root.style.setProperty(APP_THEME_VARIABLES[role], value);
-    }
-    applyContextChipVariables(root, colors);
+    paintThemeDefinition(root, palette, appearance ?? legacyThemeMode(theme) ?? palette.appearance);
     return;
   }
 
@@ -1633,6 +1627,31 @@ export function applyThemePalette(theme: ThemePreference, appearance?: ThemeAppe
     root.style.removeProperty(variable);
   }
   applyContextChipVariables(root, getStandardPaintedThemeColors(appearance ?? "light"));
+}
+
+/** Paints a theme that isn't installed, such as one a project ships, in place of the user's. */
+export function applyThemeDefinitionPalette(
+  theme: ThemeDefinition,
+  appearance: ThemeAppearance,
+): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (!root?.style) return;
+  setThemePreviewAppearance(null);
+  paintThemeDefinition(root, theme, appearance);
+}
+
+function paintThemeDefinition(
+  root: HTMLElement,
+  palette: ThemeDefinition,
+  mode: ThemeAppearance,
+): void {
+  root.dataset.themeId = palette.id;
+  const colors = getThemeColorsForMode(palette, mode) ?? palette.colors;
+  for (const [role, value] of Object.entries(colors) as Array<[ThemeColorRole, string]>) {
+    root.style.setProperty(APP_THEME_VARIABLES[role], value);
+  }
+  applyContextChipVariables(root, colors);
 }
 
 export function resolveThemeAppearance(

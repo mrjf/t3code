@@ -188,25 +188,31 @@ applies when the project and environment are both on **Inherit**.
 ## Project appearance
 
 A repository can give T3 Code its own look with an `appearance` block in `t3.json`. It applies
-while the app is switched to that project, on top of your theme:
+while the app is switched to that project, and goes away when you switch to another project or to
+**All projects**:
 
 ```json
 {
   "appearance": {
-    "font": "Inter, sans-serif",
-    "light": { "background": "#f6f7fb", "accent": "#2f5bea" },
-    "dark": { "background": "#0e1018", "accent": "#7b9bff" },
-    "wallpaper": "assets/t3-wallpaper.svg",
-    "wallpaperTone": "dark",
+    "theme": "assets/t3-theme.json",
+    "fonts": { "interface": "Inter, sans-serif", "code": "Berkeley Mono, monospace" },
+    "wallpaper": { "light": "assets/day.svg", "dark": "assets/night.svg" },
     "mascot": "assets/t3-mascot.svg"
   }
 }
 ```
 
-The wallpaper shows at the top of the sidebar and the mascot at the bottom of the project rail.
-Both are SVG files inside the repository. Set `wallpaperTone` to `"dark"` for a dark wallpaper so
-text over it stays readable; a light wallpaper only shows in light appearance. An invalid value
-makes the whole `t3.json` invalid, like any other field.
+- `theme` is a theme file in the format **Settings → Appearance** exports. Give it light and dark
+  variants so it follows each person's appearance.
+- Without a theme file, `light` and `dark` (each `{ "background", "accent" }`) tint your own theme
+  instead.
+- `fonts` replaces your interface and code fonts; your font sizes still apply.
+- The wallpaper shows at the top of the sidebar and the mascot at the bottom of the project rail.
+  Both are SVG files inside the repository. A single wallpaper needs `"wallpaperTone": "dark"` if it
+  is dark; a light one only shows in light appearance.
+
+Every path must stay inside the repository. An invalid value makes the whole `t3.json` invalid,
+like any other field. Settings always shows your own theme and fonts.
 
 To turn a project's look off, right-click it in the project rail and choose **Theme → My theme**,
 or pick another theme for it there. The choice is stored in this browser.

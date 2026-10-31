@@ -84,35 +84,60 @@ const ProjectAppearanceColors = Schema.Struct({
   }),
 });
 
-// Artwork must stay inside the repository: no absolute, home-relative or parent paths.
-const ProjectArtworkPath = Schema.String.check(
-  Schema.isMaxLength(T3_PROJECT_FILE_PATH_MAX_LENGTH),
-  Schema.isPattern(/^(?![/~\\])(?![A-Za-z]:)(?!.*(?:^|\/)\.\.(?:\/|$))[^\\]+\.svg$/),
-);
+// Repository files only: no absolute, home-relative, parent or Windows paths.
+const repositoryFilePath = (extension: string) =>
+  Schema.String.check(
+    Schema.isMaxLength(T3_PROJECT_FILE_PATH_MAX_LENGTH),
+    Schema.isPattern(
+      new RegExp(`^(?![/~\\\\])(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\]+\\.${extension}$`),
+    ),
+  );
+const ProjectArtworkPath = repositoryFilePath("svg");
+
+const projectFont = (description: string) =>
+  Schema.optionalKey(trimmedNonEmpty({ description }, T3_PROJECT_FILE_FONT_MAX_LENGTH));
 
 export const T3ProjectFileAppearance = Schema.Struct({
-  font: Schema.optionalKey(
-    trimmedNonEmpty(
-      { description: "CSS font-family stack for interface text while this project is open." },
-      T3_PROJECT_FILE_FONT_MAX_LENGTH,
-    ),
+  theme: Schema.optionalKey(
+    repositoryFilePath("json").annotate({
+      description:
+        'Workspace-relative path to a T3 Code theme file, as exported from Settings → Appearance (e.g. "assets/theme.json"). Give it light and dark variants to follow each user\'s appearance.',
+    }),
   ),
   light: Schema.optionalKey(
-    ProjectAppearanceColors.annotate({ description: "Colors in light appearance." }),
+    ProjectAppearanceColors.annotate({
+      description:
+        "A lighter alternative to a theme file: tints the user's own theme in light appearance.",
+    }),
   ),
   dark: Schema.optionalKey(
-    ProjectAppearanceColors.annotate({ description: "Colors in dark appearance." }),
+    ProjectAppearanceColors.annotate({
+      description:
+        "A lighter alternative to a theme file: tints the user's own theme in dark appearance.",
+    }),
+  ),
+  fonts: Schema.optionalKey(
+    Schema.Struct({
+      interface: projectFont("CSS font-family stack for interface text."),
+      code: projectFont("CSS font-family stack for code, diffs and the terminal."),
+    }).annotate({ description: "Fonts while this project is open; the user's sizes still apply." }),
   ),
   wallpaper: Schema.optionalKey(
-    ProjectArtworkPath.annotate({
+    Schema.Union([
+      ProjectArtworkPath,
+      Schema.Struct({
+        light: Schema.optionalKey(ProjectArtworkPath),
+        dark: Schema.optionalKey(ProjectArtworkPath),
+      }),
+    ]).annotate({
       description:
-        'Workspace-relative path to an SVG shown at the top of the sidebar (e.g. "assets/wallpaper.svg").',
+        'Workspace-relative path to an SVG shown at the top of the sidebar, or { "light", "dark" } paths for each appearance.',
     }),
   ),
   wallpaperTone: Schema.optionalKey(
     Schema.Literals(["light", "dark"]).annotate({
       description:
-        'Whether the wallpaper is "light" or "dark", so text over it stays readable. A light wallpaper is shown only in light appearance. Defaults to "light".',
+        'For a single wallpaper: whether it is "light" or "dark", so text over it stays readable. A light wallpaper is shown only in light appearance. Defaults to "light".',
     }),
   ),
   mascot: Schema.optionalKey(

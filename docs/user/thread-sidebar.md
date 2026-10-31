@@ -8,8 +8,9 @@ need a separate branch and working directory.
 With more than one project, the project rail runs down the left edge of the sidebar. Choose a
 project to switch the whole app to it: the thread list, search and new threads stay in that
 project, and **All projects** at the top shows everything again. Shift-click to show several
-projects at once. With the sidebar closed, the project name in the thread header switches
-projects too. Opening a thread from another project, from a link or the command palette,
+projects at once. Press `mod+alt+1` to `mod+alt+9`, then `mod+alt` with a letter, to switch to
+the rail's projects in order; hold `mod+alt` to see each project's key. The project name in the
+thread header switches projects too. Opening a thread from another project, from a link or the command palette,
 switches to its project.
 
 Right-click a project in the rail to pin it, open its settings, or choose its theme. A project
