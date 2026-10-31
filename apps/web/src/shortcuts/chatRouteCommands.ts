@@ -11,7 +11,10 @@ import { shouldCreateNewThreadInCurrentProject } from "../components/Sidebar.log
 import { createNewThreadHandler, resolveDefaultProjectRef } from "../hooks/useHandleNewThread";
 import { createScratchProjectActions } from "../hooks/useScratchProject";
 import { getClientSettings } from "../hooks/useSettings";
-import { startNewThreadFromContext } from "../lib/chatThreadActions";
+import {
+  resolveScopedNewThreadProjectRef,
+  startNewThreadFromContext,
+} from "../lib/chatThreadActions";
 import { selectProjectGroupingSettings } from "@t3tools/client-runtime/state/project-grouping";
 import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
 import { appAtomRegistry } from "../rpc/atomRegistry";
@@ -127,6 +130,17 @@ export function installChatRouteCommands(router: AnyRouter): () => void {
         // the current project like the legacy sidebar did.
         const { boringSidebarEnabled, legacySidebarEnabled } = getClientSettings();
         const groups = readProjectGroups();
+        const threadContext = readThreadContext();
+        const scopedProjectRef = resolveScopedNewThreadProjectRef(
+          groups,
+          useUiStateStore.getState().sidebarProjectScopeKeys,
+          threadContext,
+        );
+        if (scopedProjectRef) {
+          claim(event);
+          void threadContext.handleNewThread(scopedProjectRef);
+          return;
+        }
         if (
           !boringSidebarEnabled &&
           !legacySidebarEnabled &&

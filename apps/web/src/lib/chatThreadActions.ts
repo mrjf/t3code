@@ -67,9 +67,9 @@ export function hasExplicitComposerModelSelection(
   );
 }
 
-export function resolveThreadActionProjectRef(
-  context: ChatThreadActionContext,
-): ScopedProjectRef | null {
+export function resolveThreadActionProjectRef<
+  Context extends Omit<ChatThreadActionContext, "handleNewThread">,
+>(context: Context): ScopedProjectRef | null {
   if (context.activeThread) {
     return scopeProjectRef(context.activeThread.environmentId, context.activeThread.projectId);
   }
@@ -92,4 +92,29 @@ export async function startNewThreadFromContext(
 
   await context.handleNewThread(projectRef);
   return true;
+}
+
+/** While the app is scoped to one project, new threads start there without asking. */
+export function resolveScopedNewThreadProjectRef(
+  groups: ReadonlyArray<{
+    readonly projectKey: string;
+    readonly archived: boolean;
+    readonly environmentId: ScopedProjectRef["environmentId"];
+    readonly id: ScopedProjectRef["projectId"];
+    readonly memberProjectRefs: ReadonlyArray<ScopedProjectRef>;
+  }>,
+  scopeKeys: ReadonlyArray<string>,
+  context: Omit<ChatThreadActionContext, "handleNewThread">,
+): ScopedProjectRef | null {
+  if (scopeKeys.length !== 1) return null;
+  const group = groups.find((candidate) => candidate.projectKey === scopeKeys[0]);
+  if (!group || group.archived) return null;
+  const contextual = resolveThreadActionProjectRef(context);
+  const contextualInGroup =
+    contextual !== null &&
+    group.memberProjectRefs.some(
+      (ref) =>
+        ref.environmentId === contextual.environmentId && ref.projectId === contextual.projectId,
+    );
+  return contextualInGroup ? contextual : scopeProjectRef(group.environmentId, group.id);
 }

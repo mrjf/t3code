@@ -121,7 +121,10 @@ import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { useTerminalFocus } from "../hooks/useTerminalFocus";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { registerSettleAndAdvance } from "../settleAndAdvance";
-import { startNewThreadFromContext } from "../lib/chatThreadActions";
+import {
+  resolveScopedNewThreadProjectRef,
+  startNewThreadFromContext,
+} from "../lib/chatThreadActions";
 import { useBoringSidebarEnabled, useClientSettings } from "../hooks/useSettings";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../hooks/useLocalStorage";
@@ -2901,6 +2904,16 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const showJumpHints = useThreadJumpHintsVisible(shouldShowJumpHintsNow);
 
   const handleNewThreadClick = (event?: ReactMouseEvent) => {
+    const scopedProjectRef = resolveScopedNewThreadProjectRef(projectGroups, projectScopeKeys, {
+      activeDraftThread: newThreadContext.activeDraftThread,
+      activeThread: newThreadContext.activeThread ?? undefined,
+      defaultProjectRef: newThreadContext.defaultProjectRef,
+    });
+    if (scopedProjectRef) {
+      if (isMobile) setOpenMobile(false);
+      void handleNewThread(scopedProjectRef);
+      return;
+    }
     if (
       boringSidebarEnabled ||
       shouldCreateNewThreadInCurrentProject(
@@ -2961,6 +2974,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                   newThreadInProjectShortcutLabel={newThreadInProjectShortcutLabel}
                   showNewThreadInProjectHint={
                     !boringSidebarEnabled &&
+                    projectScopeKeys.length !== 1 &&
                     !shouldCreateNewThreadInCurrentProject(
                       false,
                       scopeGroups.length,
