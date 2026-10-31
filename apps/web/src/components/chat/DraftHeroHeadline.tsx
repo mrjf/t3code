@@ -1,4 +1,5 @@
 import type { DraftId } from "~/composerDraftStore";
+import { useUiStateStore } from "~/uiStateStore";
 import { composerDraftHasUserContent, useComposerDraftStore } from "~/composerDraftStore";
 import { resolveEnvironmentMachineKind, type ScopedProjectRef } from "@t3tools/contracts";
 import { scopedProjectKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
@@ -100,6 +101,7 @@ export function DraftHeroHeadline({
   const pickerFilter = useComboboxFilter();
   const highlightedPickerValueRef = useRef<string | null>(null);
   const { canPinProjectGroup, toggleProjectGroupPin } = useProjectPin();
+  const setProjectScopeKeys = useUiStateStore((store) => store.setSidebarProjectScopeKeys);
 
   const environmentLabelById = new Map(
     environments.map((environment) => [environment.environmentId, environment.label] as const),
@@ -198,6 +200,7 @@ export function DraftHeroHeadline({
     if (!draftId) {
       return;
     }
+    setProjectScopeKeys([logicalProjectKey]);
     pendingScratchRef.current = null;
     const currentDraft = getComposerDraft(draftId);
     if (!composerDraftHasUserContent(currentDraft)) {

@@ -1065,7 +1065,25 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     delegatedUnderParent,
     findThread: (key) => threads.find((candidate) => threadShellKey(candidate) === key),
   });
-  const projectScopeKeys = revealWidensScope ? [] : chosenProjectScopeKeys;
+  // A thread opened outside the scope switches the app to its project, not to all projects.
+  const revealThread = revealWidensScope
+    ? threads.find((candidate) => threadShellKey(candidate) === routeRowThreadKey)
+    : undefined;
+  const revealGroup = revealThread
+    ? (scopeGroups.find((group) =>
+        group.memberProjectRefs.some(
+          (ref) =>
+            ref.environmentId === revealThread.environmentId &&
+            ref.projectId === revealThread.projectId,
+        ),
+      ) ?? null)
+    : null;
+  const revealProjectKey = revealGroup?.projectKey ?? null;
+  const projectScopeKeys = revealWidensScope
+    ? revealProjectKey === null
+      ? []
+      : [revealProjectKey]
+    : chosenProjectScopeKeys;
   const projectScopeKey = projectScopeKeys.length === 0 ? null : projectScopeKeys.join("\n");
   const toggleProjectScopeKey = (key: string) =>
     setProjectScopeKeys(
@@ -1081,8 +1099,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   useEffect(() => {
     if (!revealWidensScope) return;
     clearSelection();
-    setPersistedProjectScopeKeys([]);
-  }, [clearSelection, revealWidensScope, setPersistedProjectScopeKeys]);
+    setPersistedProjectScopeKeys(revealProjectKey === null ? [] : [revealProjectKey]);
+  }, [clearSelection, revealWidensScope, revealProjectKey, setPersistedProjectScopeKeys]);
   const revealActiveRow = useActiveRowReveal(routeReveal, routeRowThreadKey);
   const showProjectEnvironments = projectGroupsSpanEnvironments(projectGroups);
   const scratchMachineLabelFor = (
@@ -1098,12 +1116,20 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     }
     return environmentLabelById.get(thread.environmentId) ?? null;
   };
-  const scopedProjectGroups = revealWidensScope ? [] : chosenProjectGroups;
+  const scopedProjectGroups = revealWidensScope
+    ? revealGroup
+      ? [revealGroup]
+      : []
+    : chosenProjectGroups;
   const scopedProjectRefs = scopedProjectGroups.flatMap((project) => project.memberProjectRefs);
-  const scopedProjectKeys = revealWidensScope ? null : chosenScopeProjectKeys;
+  const scopedProjectKeys = revealWidensScope
+    ? revealGroup
+      ? new Set(revealGroup.memberProjectRefs.map((ref) => `${ref.environmentId}:${ref.projectId}`))
+      : null
+    : chosenScopeProjectKeys;
   const [projectThemeChoices, setProjectThemeChoice] = useProjectThemeChoices();
   const { resolvedTheme: userAppearance } = useTheme();
-  const themedProject = chosenProjectGroups.length === 1 ? chosenProjectGroups[0]! : null;
+  const themedProject = scopedProjectGroups.length === 1 ? scopedProjectGroups[0]! : null;
   const projectTheme = themedProject
     ? resolveProjectThemeColors(
         themedProject,

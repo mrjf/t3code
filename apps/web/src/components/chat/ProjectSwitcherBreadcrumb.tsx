@@ -2,7 +2,7 @@ import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environ
 import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import { useRouter } from "@tanstack/react-router";
-import { CheckIcon, ChevronDownIcon, LayersIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, LayersIcon, SquarePenIcon } from "lucide-react";
 
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
 import { useSidebarProjectGroups } from "~/hooks/useSidebarProjectGroups";
@@ -13,10 +13,11 @@ import { ProjectFavicon } from "../ProjectFavicon";
 import { WorkspaceBreadcrumbText } from "../WorkspaceBreadcrumb";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 
-/** The breadcrumb's project, as a top-level project switcher while the sidebar is closed. */
+/** The breadcrumb's project, as the app's top-level project switcher. */
 export function ProjectSwitcherBreadcrumb(props: {
   activeProject: EnvironmentProject;
   activeProjectName: string | undefined;
+  onNewThreadInProject: () => void;
 }) {
   const router = useRouter();
   const projectGroups = pickableProjectGroups(useSidebarProjectGroups());
@@ -67,6 +68,11 @@ export function ProjectSwitcherBreadcrumb(props: {
         <ChevronDownIcon className="size-3 shrink-0" />
       </MenuTrigger>
       <MenuPopup align="start" className="min-w-52">
+        <MenuItem onClick={props.onNewThreadInProject}>
+          <SquarePenIcon className="size-4" />
+          New thread in {props.activeProjectName}
+        </MenuItem>
+        <MenuSeparator />
         <MenuItem onClick={() => setScopeKeys([])}>
           <LayersIcon className="size-4" />
           <span className="flex-1">All projects</span>
