@@ -13,6 +13,7 @@ import {
 } from "../../navigationHistory";
 import { primaryServerKeybindingsAtom } from "../../state/server";
 import { cn } from "../../lib/utils";
+import { useActiveProjectArtwork } from "../../projectTheme";
 import { usePullRequestsSupported } from "../../state/environments";
 import { T3Wordmark } from "../T3Wordmark";
 import {
@@ -56,6 +57,12 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
       ? resolveEnvironmentIdentificationPillLabel(stageLabel)
       : null;
 
+  const projectArtwork = useActiveProjectArtwork();
+  const projectWallpaper = projectArtwork?.wallpaper ?? null;
+  const onBackdrop = projectWallpaper
+    ? projectArtwork?.wallpaperTone === "dark"
+    : backdropVariant !== null;
+
   return (
     <div
       className={cn(
@@ -63,21 +70,30 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
         isElectron && "drag-region",
       )}
     >
-      {backdropVariant ? <SidebarStageBackdrop variant={backdropVariant} /> : null}
+      {projectWallpaper ? (
+        <div
+          aria-hidden
+          className="sidebar-stage-backdrop pointer-events-none absolute inset-x-0 top-0 z-0 h-20 select-none overflow-hidden"
+        >
+          <img alt="" src={projectWallpaper} className="h-full w-full object-cover object-left" />
+        </div>
+      ) : backdropVariant ? (
+        <SidebarStageBackdrop variant={backdropVariant} />
+      ) : null}
       <div className="relative top-[calc(var(--workspace-controls-top)-env(safe-area-inset-top))] z-10 ml-[calc(var(--workspace-controls-left)+1px-env(safe-area-inset-left))] flex shrink-0 items-center md:hidden">
         <SidebarTrigger
-          variant={backdropVariant ? "media-navigation" : "ghost"}
+          variant={onBackdrop ? "media-navigation" : "ghost"}
           className="relative top-auto translate-y-0"
           aria-label="Toggle main sidebar"
         />
       </div>
       <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
         <div className="flex shrink-0 items-center gap-1">
-          <SidebarBrand onBackdrop={backdropVariant !== null} />
+          <SidebarBrand onBackdrop={onBackdrop} />
           {isElectron ? (
             <div className="hidden items-center md:flex">
-              <HistoryNavigationButton direction="back" onBackdrop={backdropVariant !== null} />
-              <HistoryNavigationButton direction="forward" onBackdrop={backdropVariant !== null} />
+              <HistoryNavigationButton direction="back" onBackdrop={onBackdrop} />
+              <HistoryNavigationButton direction="forward" onBackdrop={onBackdrop} />
             </div>
           ) : null}
         </div>

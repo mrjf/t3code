@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import { useSyncExternalStore } from "react";
 import type { ProjectReadFileResult, ScopedProjectRef } from "@t3tools/contracts";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
 import * as Option from "effect/Option";
@@ -27,6 +28,9 @@ const HexColor = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/));
 const AppearanceColors = Schema.Struct({ background: HexColor, accent: HexColor });
 const ProjectAppearance = Schema.Struct({
   font: Schema.optional(Schema.String),
+  wallpaper: Schema.optional(Schema.String),
+  wallpaperTone: Schema.optional(Schema.Literals(["light", "dark"])),
+  mascot: Schema.optional(Schema.String),
   light: Schema.optional(AppearanceColors),
   dark: Schema.optional(AppearanceColors),
 });
@@ -41,17 +45,69 @@ const NO_PROJECT_FILE = Atom.make(AsyncResult.initial<ProjectReadFileResult, nev
 export function useProjectAppearance(
   project: (ScopedProjectRef & { readonly workspaceRoot: string }) | null,
 ): ProjectAppearance | null {
+  const contents = useProjectFile(project, "t3.json");
+  return contents === null
+    ? null
+    : (Option.getOrUndefined(decodeProjectFile(contents))?.appearance ?? null);
+}
+
+function useProjectFile(
+  project: (ScopedProjectRef & { readonly workspaceRoot: string }) | null,
+  relativePath: string | null,
+): string | null {
   const result = useAtomValue(
-    project
+    project && relativePath
       ? projectEnvironment.readFile({
           environmentId: project.environmentId,
-          input: { cwd: project.workspaceRoot, relativePath: "t3.json", allowMissing: true },
+          input: { cwd: project.workspaceRoot, relativePath, allowMissing: true },
         })
       : NO_PROJECT_FILE,
   );
   const file = Option.getOrUndefined(AsyncResult.value(result));
-  if (!project || !file || file.exists === false) return null;
-  return Option.getOrUndefined(decodeProjectFile(file.contents))?.appearance ?? null;
+  return file && file.exists !== false && !file.truncated ? file.contents : null;
+}
+
+// Artwork is SVG so it reads as text; an <img> never runs its scripts.
+function svgDataUrl(contents: string | null): string | null {
+  return contents?.trimStart().startsWith("<svg")
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(contents)}`
+    : null;
+}
+
+export interface ProjectArtwork {
+  readonly wallpaper: string | null;
+  readonly wallpaperTone: "light" | "dark";
+  readonly mascot: string | null;
+}
+
+export function useProjectArtwork(
+  project: (ScopedProjectRef & { readonly workspaceRoot: string }) | null,
+  appearance: ProjectAppearance | null,
+): ProjectArtwork | null {
+  const wallpaper = svgDataUrl(useProjectFile(project, appearance?.wallpaper ?? null));
+  const mascot = svgDataUrl(useProjectFile(project, appearance?.mascot ?? null));
+  if (!wallpaper && !mascot) return null;
+  return { wallpaper, wallpaperTone: appearance?.wallpaperTone ?? "light", mascot };
+}
+
+let activeArtwork: ProjectArtwork | null = null;
+const artworkListeners = new Set<() => void>();
+
+export function setActiveProjectArtwork(artwork: ProjectArtwork | null): void {
+  activeArtwork = artwork;
+  for (const listener of artworkListeners) listener();
+}
+
+/** The artwork of the project the app is switched to, for the sidebar header and the canvas. */
+export function useActiveProjectArtwork(): ProjectArtwork | null {
+  return useSyncExternalStore(
+    (listener) => {
+      artworkListeners.add(listener);
+      return () => artworkListeners.delete(listener);
+    },
+    () => activeArtwork,
+    () => null,
+  );
 }
 
 const NO_PROJECT_THEME_CHOICES: Readonly<Record<string, ProjectThemeChoice>> = {};

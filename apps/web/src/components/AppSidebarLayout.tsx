@@ -64,6 +64,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
+import { useActiveProjectArtwork } from "../projectTheme";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -320,6 +321,10 @@ function SidebarControl() {
   const isSidebarVisible = useSidebarVisibility();
   const environmentIdentificationMode = useEnvironmentIdentificationMode();
   const stageBackdropVariant = useSidebarStageBackdropVariant(environmentIdentificationMode);
+  const projectArtwork = useActiveProjectArtwork();
+  const onDarkBackdrop = projectArtwork?.wallpaper
+    ? projectArtwork.wallpaperTone === "dark"
+    : stageBackdropVariant !== null;
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
   });
@@ -384,10 +389,10 @@ function SidebarControl() {
         <TooltipTrigger
           render={
             <SidebarTrigger
-              variant={isSidebarVisible && stageBackdropVariant ? "media-navigation" : "ghost"}
+              variant={isSidebarVisible && onDarkBackdrop ? "media-navigation" : "ghost"}
               className={cn(
                 "pointer-events-auto",
-                isSidebarVisible && stageBackdropVariant && "relative top-auto translate-y-0",
+                isSidebarVisible && onDarkBackdrop && "relative top-auto translate-y-0",
               )}
               aria-label="Toggle main sidebar"
             />
@@ -398,6 +403,19 @@ function SidebarControl() {
         </TooltipPopup>
       </Tooltip>
     </div>
+  );
+}
+
+function ProjectMascot() {
+  const mascot = useActiveProjectArtwork()?.mascot;
+  if (!mascot) return null;
+  return (
+    <img
+      alt=""
+      aria-hidden
+      src={mascot}
+      className="pointer-events-none fixed right-5 bottom-5 z-[1] size-16 -rotate-8 select-none drop-shadow-md"
+    />
   );
 }
 
@@ -473,6 +491,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           <SidebarRail onDoubleClick={resetSidebarWidth} />
         </Sidebar>
         {children}
+        <ProjectMascot />
         <BackgroundThreadAnnouncer />
         <SidebarControl />
         {isElectron ? <HistorySwipeNavigation /> : null}

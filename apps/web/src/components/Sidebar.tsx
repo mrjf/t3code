@@ -235,7 +235,9 @@ import {
   projectThemeOptions,
   resolveProjectLook,
   resolveProjectThemeChoice,
+  setActiveProjectArtwork,
   useProjectAppearance,
+  useProjectArtwork,
   useProjectThemeChoices,
 } from "../projectTheme";
 import { TooltipProvider } from "./ui/tooltip";
@@ -1135,22 +1137,25 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const [projectThemeChoices, setProjectThemeChoice] = useProjectThemeChoices();
   const { resolvedTheme: userAppearance } = useTheme();
   const themedProject = scopedProjectGroups.length === 1 ? scopedProjectGroups[0]! : null;
-  const projectAppearance = useProjectAppearance(
-    themedProject
-      ? {
-          environmentId: themedProject.environmentId,
-          projectId: themedProject.id,
-          workspaceRoot: themedProject.workspaceRoot,
-        }
-      : null,
-  );
+  const themedProjectRef = themedProject
+    ? {
+        environmentId: themedProject.environmentId,
+        projectId: themedProject.id,
+        workspaceRoot: themedProject.workspaceRoot,
+      }
+    : null;
+  const projectAppearance = useProjectAppearance(themedProjectRef);
+  const projectArtwork = useProjectArtwork(themedProjectRef, projectAppearance);
+  const projectThemeChoice = themedProject
+    ? resolveProjectThemeChoice(
+        themedProject.projectKey,
+        projectAppearance !== null,
+        projectThemeChoices,
+      )
+    : "none";
   const projectLook = themedProject
     ? resolveProjectLook({
-        choice: resolveProjectThemeChoice(
-          themedProject.projectKey,
-          projectAppearance !== null,
-          projectThemeChoices,
-        ),
+        choice: projectThemeChoice,
         projectAppearance,
         appearance: userAppearance,
       })
@@ -1162,6 +1167,14 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     if (projectLookKey === null) return;
     return applyProjectLook(JSON.parse(projectLookKey));
   }, [projectLookKey]);
+  const activeArtwork = projectThemeChoice === "project" ? projectArtwork : null;
+  const activeArtworkKey = activeArtwork ? JSON.stringify(activeArtwork) : null;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- publishes the project's artwork to the sidebar header and canvas outside this component
+  useEffect(() => {
+    if (activeArtworkKey === null) return;
+    setActiveProjectArtwork(JSON.parse(activeArtworkKey));
+    return () => setActiveProjectArtwork(null);
+  }, [activeArtworkKey]);
   const threadSearch = useThreadSearch(
     connectedEnvironmentIds,
     threadSearchQuery,
