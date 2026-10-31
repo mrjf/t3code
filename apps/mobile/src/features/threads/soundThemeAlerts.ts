@@ -1,5 +1,5 @@
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/models";
-import { attentionSoundEvent } from "@t3tools/client-runtime/sound-themes";
+import { attentionSoundEvent, playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   createThreadNotificationGate,
   type ThreadNotificationObservation,
@@ -7,7 +7,7 @@ import {
 import { isShownUnderParent } from "@t3tools/client-runtime/state/threads";
 
 import { scopedThreadKey } from "../../lib/scopedEntities";
-import { isSoundThemeOn, playThemeSound } from "../../lib/soundThemes";
+import { isSoundThemeOn } from "../../lib/soundThemes";
 import { appAtomRegistry } from "../../state/atom-registry";
 import { mobilePreferencesAtom } from "../../state/preferences";
 import { environmentThreadShells } from "../../state/threads";
@@ -44,8 +44,7 @@ export function installSoundThemeAlerts(): () => void {
   let previous = new Map<string, AlertState>();
   const gate = createThreadNotificationGate<string>((key, kind) => {
     const state = previous.get(key);
-    if (state)
-      playThemeSound(kind === "completion" ? "complete" : attentionSoundEvent(state.status));
+    if (state) playSound(kind === "completion" ? "complete" : attentionSoundEvent(state.status));
   });
 
   const observe = (shells: ReadonlyArray<EnvironmentThreadShell>) => {

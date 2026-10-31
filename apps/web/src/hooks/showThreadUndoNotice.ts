@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   type AtomCommandResult,
   isAtomCommandInterrupted,
@@ -86,6 +87,7 @@ function refreshNotice() {
       liveUndos = liveUndos.filter((entry) => !group.includes(entry));
       // Claim before awaiting to prevent repeated actions restoring a group twice.
       for (const entry of current) entry.claim.finish();
+      if (current.length > 0) playSound("undo");
       refreshNotice();
       await Promise.all(
         current.map(async ({ undo, failureTitle }) => {

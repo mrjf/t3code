@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -181,6 +182,7 @@ export const ChatHeader = memo(function ChatHeader({
       return;
     }
     if (resolution.action === "noop") return;
+    playSound("rename");
     void updateThreadMetadata({
       environmentId: activeThreadEnvironmentId,
       input: { threadId: activeThreadId, title: resolution.title },

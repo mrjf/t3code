@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import * as Schema from "effect/Schema";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
@@ -42,6 +43,7 @@ export async function tryCopyTextWithHaptic(
   const clipboardWrite = (async () => {
     try {
       await Clipboard.setStringAsync(value);
+      playSound("copy");
       return true;
     } catch (cause) {
       const error = new CopyTextClipboardWriteError({ target, cause });

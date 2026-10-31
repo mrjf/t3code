@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
 import { visibleThreadPullRequests } from "@t3tools/shared/threadPullRequests";
 
@@ -780,6 +781,7 @@ function OpenCommandPaletteDialog(props: {
       return;
     }
 
+    playSound("newThread");
     await handleNewThread(scopeProjectRef(project.environmentId, project.id));
   };
 
@@ -814,6 +816,7 @@ function OpenCommandPaletteDialog(props: {
                 projectRef.environmentId === contextualProjectRef.environmentId &&
                 projectRef.projectId === contextualProjectRef.projectId,
             );
+          playSound("newThread");
           await handleNewThread(
             contextualRefBelongsToGroup
               ? contextualProjectRef

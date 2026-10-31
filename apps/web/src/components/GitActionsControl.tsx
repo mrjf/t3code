@@ -1,3 +1,4 @@
+import { gitActionSoundEvent, playSound } from "@t3tools/client-runtime/sound-themes";
 import { ThreadDetailsControl } from "./chat/ThreadDetailsControl";
 import { useAtomMount, useAtomValue } from "@effect/atom-react";
 import {
@@ -1194,6 +1195,7 @@ export default function GitActionsControl({
     }
     onConfirmed?.();
     setInlineSuccess(null);
+    playSound(gitActionSoundEvent(action));
 
     const scopedToastData = threadToastData ? { ...threadToastData } : undefined;
     const actionId = randomUUID();

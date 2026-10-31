@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   WorkspaceColumnsRendererContext,
   WorkspacePresentationHostContext,
@@ -493,6 +494,7 @@ function AdaptiveWorkspaceLayoutContent(
       setPrimarySidebarPreferredVisible(true);
       return;
     }
+    playSound(preferredSidebarVisible ? "panelClose" : "panelOpen");
     setPrimarySidebarVisible(!preferredSidebarVisible);
   };
   const revealPrimarySidebar = () => {
@@ -596,6 +598,7 @@ function AdaptiveWorkspaceLayoutContent(
     Platform.OS === "android" && androidSettingsOpen && !layout.usesSplitView;
   // Reads the open page when pressed, so the layout context doesn't change on every navigation.
   const handleStartNewTask = () => {
+    playSound("newThread");
     const state = rootStackState(navigation);
     const currentRoute = workspaceRoutesOf(
       state?.routes.slice(0, state.index + 1) ?? [],

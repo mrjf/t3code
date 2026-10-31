@@ -1,8 +1,12 @@
 import {
-  SOUND_EVENT_LABELS,
+  type ActiveSoundTheme,
+  isSoundEventEnabled,
+  SOUND_EVENT_GROUPS,
+  SOUND_EVENT_INFO,
   SOUND_EVENTS,
   SOUND_THEME_DESCRIPTIONS,
   SOUND_THEME_LABELS,
+  type SoundEventGroup,
 } from "@t3tools/client-runtime/sound-themes";
 import { DEFAULT_UNIFIED_SETTINGS, SoundTheme } from "@t3tools/contracts/settings";
 import * as Schema from "effect/Schema";
@@ -11,11 +15,16 @@ import { PlayIcon } from "lucide-react";
 import { previewSound } from "../../soundThemes";
 import { Button } from "../ui/button";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
+import { Switch } from "../ui/switch";
 import { SettingResetButton, SettingsRow, SettingsSection } from "./settingsLayout";
 import { searchableSetting } from "./settingsSearch";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 
 const isSoundTheme = Schema.is(SoundTheme);
+const EVENTS_BY_GROUP = Object.keys(SOUND_EVENT_GROUPS).map((group) => ({
+  group: group as SoundEventGroup,
+  events: SOUND_EVENTS.filter((event) => SOUND_EVENT_INFO[event].group === group),
+}));
 
 function SoundThemeSelect(props: {
   readonly label: string;
@@ -43,9 +52,50 @@ function SoundThemeSelect(props: {
   );
 }
 
+function SoundEventList(props: { readonly theme: ActiveSoundTheme }) {
+  const soundEvents = useScopedSettings((settings) => settings.soundEvents);
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <div className="grid gap-4 pb-3 sm:grid-cols-2">
+      {EVENTS_BY_GROUP.map(({ group, events }) => (
+        <div key={group} role="group" aria-label={SOUND_EVENT_GROUPS[group]}>
+          <div className="pb-1 text-xs font-medium text-muted-foreground">
+            {SOUND_EVENT_GROUPS[group]}
+          </div>
+          {events.map((event) => {
+            const { label } = SOUND_EVENT_INFO[event];
+            return (
+              <div key={event} className="flex items-center gap-1 py-0.5">
+                <Button
+                  size="icon-xs"
+                  variant="ghost-muted"
+                  aria-label={`Play ${label}`}
+                  onClick={() => void previewSound(props.theme, event)}
+                >
+                  <PlayIcon />
+                </Button>
+                <span className="min-w-0 flex-1 truncate text-sm">{label}</span>
+                <Switch
+                  size="sm"
+                  aria-label={label}
+                  checked={isSoundEventEnabled(event, soundEvents)}
+                  onCheckedChange={(checked) =>
+                    updateSettings({ soundEvents: { ...soundEvents, [event]: checked } })
+                  }
+                />
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SoundSettingsSection() {
   const soundTheme = useScopedSettings((settings) => settings.soundTheme);
   const typingSoundTheme = useScopedSettings((settings) => settings.typingSoundTheme);
+  const soundEvents = useScopedSettings((settings) => settings.soundEvents);
   const updateSettings = useUpdateScopedSettings();
 
   return (
@@ -54,14 +104,20 @@ export function SoundSettingsSection() {
         {...searchableSetting("sound-theme")}
         description={
           soundTheme === "off"
-            ? "Play sounds when you send or stop, and when a thread finishes, fails, or needs you. Replaces notification sounds on this device."
-            : `${SOUND_THEME_DESCRIPTIONS[soundTheme]} Replaces notification sounds on this device.`
+            ? "Play sounds for what you and your agents do: sends, alerts, thread actions, drag and drop, git, and more. Replaces notification sounds on this device."
+            : `${SOUND_THEME_DESCRIPTIONS[soundTheme]} Choose which events play below. Replaces notification sounds on this device.`
         }
         resetAction={
-          soundTheme !== DEFAULT_UNIFIED_SETTINGS.soundTheme ? (
+          soundTheme !== DEFAULT_UNIFIED_SETTINGS.soundTheme ||
+          Object.keys(soundEvents).length > 0 ? (
             <SettingResetButton
-              label="sound theme"
-              onClick={() => updateSettings({ soundTheme: DEFAULT_UNIFIED_SETTINGS.soundTheme })}
+              label="sounds"
+              onClick={() =>
+                updateSettings({
+                  soundTheme: DEFAULT_UNIFIED_SETTINGS.soundTheme,
+                  soundEvents: DEFAULT_UNIFIED_SETTINGS.soundEvents,
+                })
+              }
             />
           ) : null
         }
@@ -76,22 +132,7 @@ export function SoundSettingsSection() {
           />
         }
       >
-        {soundTheme === "off" ? null : (
-          <div className="flex flex-wrap gap-1 pb-2">
-            {SOUND_EVENTS.map((event) => (
-              <Button
-                key={event}
-                size="compact"
-                variant="ghost-muted"
-                aria-label={`Play ${SOUND_EVENT_LABELS[event]}`}
-                onClick={() => void previewSound(soundTheme, event)}
-              >
-                <PlayIcon />
-                {SOUND_EVENT_LABELS[event]}
-              </Button>
-            ))}
-          </div>
-        )}
+        {soundTheme === "off" ? null : <SoundEventList theme={soundTheme} />}
       </SettingsRow>
       <SettingsRow
         {...searchableSetting("typing-sounds")}
@@ -112,7 +153,7 @@ export function SoundSettingsSection() {
             value={typingSoundTheme}
             onChange={(value) => {
               updateSettings({ typingSoundTheme: value });
-              void previewSound(value, "key");
+              void previewSound(value, { typing: "key" });
             }}
           />
         }

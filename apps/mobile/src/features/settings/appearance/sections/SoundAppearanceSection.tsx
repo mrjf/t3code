@@ -1,5 +1,13 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react";
-import { SOUND_THEME_DESCRIPTIONS, SOUND_THEME_LABELS } from "@t3tools/client-runtime/sound-themes";
+import {
+  isSoundEventEnabled,
+  SOUND_EVENT_GROUPS,
+  SOUND_EVENT_INFO,
+  SOUND_EVENTS,
+  SOUND_THEME_DESCRIPTIONS,
+  SOUND_THEME_LABELS,
+  type SoundEventGroup,
+} from "@t3tools/client-runtime/sound-themes";
 import type { SoundTheme } from "@t3tools/contracts/settings";
 import { AsyncResult } from "effect/reactivity";
 import { View } from "react-native";
@@ -8,8 +16,13 @@ import { ListChoiceRow } from "../../../../components/ui/ListChoiceRow";
 import { previewSound } from "../../../../lib/soundThemes";
 import { mobilePreferencesAtom, updateMobilePreferencesAtom } from "../../../../state/preferences";
 import { SettingsSection } from "../../components/SettingsSection";
+import { SettingsSwitchRow } from "../../components/SettingsSwitchRow";
 
 const THEMES = ["off", "crispy", "gooey"] as const satisfies ReadonlyArray<SoundTheme>;
+const EVENTS_BY_GROUP = Object.keys(SOUND_EVENT_GROUPS).map((group) => ({
+  group: group as SoundEventGroup,
+  events: SOUND_EVENTS.filter((event) => SOUND_EVENT_INFO[event].group === group),
+}));
 
 function SoundThemeChoices(props: {
   readonly label: string;
@@ -40,12 +53,13 @@ export function SoundAppearanceSection() {
   const isReady = AsyncResult.isSuccess(preferences);
   const soundTheme = (isReady && preferences.value.soundTheme) || "off";
   const typingSoundTheme = (isReady && preferences.value.typingSoundTheme) || "off";
+  const soundEvents = (isReady && preferences.value.soundEvents) || {};
 
   return (
     <>
       <SettingsSection
         title="Sounds"
-        footer="Plays when you send or stop, and when a thread finishes, fails, or needs you while the app is open."
+        footer="Plays for what you and your agents do while the app is open. Choose which events play below."
       >
         <SoundThemeChoices
           label="Sound theme"
@@ -57,6 +71,24 @@ export function SoundAppearanceSection() {
           }}
         />
       </SettingsSection>
+      {soundTheme === "off"
+        ? null
+        : EVENTS_BY_GROUP.map(({ group, events }) => (
+            <SettingsSection key={group} title={`${SOUND_EVENT_GROUPS[group]} sounds`}>
+              {events.map((event) => (
+                <SettingsSwitchRow
+                  key={event}
+                  label={SOUND_EVENT_INFO[event].label}
+                  disabled={!isReady}
+                  value={isSoundEventEnabled(event, soundEvents)}
+                  onValueChange={(enabled) => {
+                    savePreferences({ soundEvents: { ...soundEvents, [event]: enabled } });
+                    if (enabled) previewSound(soundTheme, event);
+                  }}
+                />
+              ))}
+            </SettingsSection>
+          ))}
       <SettingsSection
         title="Typing sounds"
         footer="Plays a key sound as you type in the composer."
@@ -67,7 +99,7 @@ export function SoundAppearanceSection() {
           disabled={!isReady}
           onChange={(value) => {
             savePreferences({ typingSoundTheme: value });
-            previewSound(value, "key");
+            previewSound(value, "typing-key");
           }}
         />
       </SettingsSection>

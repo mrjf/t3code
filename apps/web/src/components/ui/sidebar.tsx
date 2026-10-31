@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -146,13 +147,16 @@ function createSidebarOpenStore(defaultOpen: boolean) {
       moveFocusOutOfCollapsingSidebar();
     }
     if (open !== state.open) {
+      playSound(open ? "panelOpen" : "panelClose");
       if (!isMobileViewport()) announceSidebarVisibility(open);
       publish({ ...state, open });
     }
     void persistSidebarOpen(open);
   };
   const setOpenMobile = (openMobile: boolean) => {
-    if (openMobile !== state.openMobile) publish({ ...state, openMobile });
+    if (openMobile === state.openMobile) return;
+    playSound(openMobile ? "panelOpen" : "panelClose");
+    publish({ ...state, openMobile });
   };
   return {
     subscribe: (listener: () => void) => {

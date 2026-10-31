@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { useAtomValue } from "@effect/atom-react";
 import { ThreadDetailsControl } from "./ThreadDetailsControl";
 import { ThreadHoverCardPopup } from "../ThreadHoverCard";
@@ -561,6 +562,7 @@ export function ThreadRelationshipsPanel(props: {
   ) => {
     if (stoppingId !== null) return;
     setStoppingId(childThreadId);
+    playSound("interrupt");
     const result = await interruptTurn({
       environmentId: props.environmentId,
       input: { threadId: agent.threadId, subagentId: agent.id },

@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import type { EnvironmentId, ScopedThreadRef } from "@t3tools/contracts";
 import { type RefObject, useEffect, useEffectEvent, useSyncExternalStore } from "react";
 
@@ -96,6 +97,7 @@ export function dropThreadContext(
   const target = findDropTarget(point);
   if (!target || threads.length === 0) return false;
   target.dispatchEvent(new CustomEvent(THREAD_CONTEXT_DROP_EVENT, { detail: threads }));
+  playSound("drop");
   return true;
 }
 

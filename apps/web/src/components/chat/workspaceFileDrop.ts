@@ -1,3 +1,5 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
+
 interface WorkspaceFileDragEvent {
   readonly dataTransfer: {
     readonly types: ReadonlyArray<string>;
@@ -60,6 +62,7 @@ export function makeWorkspaceFileDropHandlers(host: WorkspaceFileDropHost) {
       if (!isFileDrag(event)) return;
       event.preventDefault();
       if (movedWithinDropTarget(event)) return;
+      playSound("dragStart");
       host.setDragActive(true);
     },
     onDragOver(event: WorkspaceFileDragEvent) {
@@ -78,6 +81,7 @@ export function makeWorkspaceFileDropHandlers(host: WorkspaceFileDropHost) {
       if (!isFileDrag(event)) return;
       event.preventDefault();
       host.setDragActive(false);
+      playSound("drop");
       const { files, folders } = splitTransferredFiles(event.dataTransfer);
       if (files.length > 0) host.addFiles(files);
       if (folders.length > 0) host.addFolders(folders);

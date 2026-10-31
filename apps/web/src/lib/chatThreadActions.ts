@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
 import type {
   EnvironmentId,
@@ -90,6 +91,7 @@ export async function startNewThreadFromContext(
     return false;
   }
 
+  playSound("newThread");
   await context.handleNewThread(projectRef);
   return true;
 }

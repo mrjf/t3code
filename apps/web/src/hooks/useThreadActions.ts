@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   parseScopedThreadKey,
   scopeProjectRef,
@@ -347,6 +348,7 @@ export function useThreadActions() {
 
   const unarchiveThread = async (target: ScopedThreadRef, opts: { navigate?: boolean } = {}) => {
     ThreadUndo.invalidate("archive", scopedThreadKey(target));
+    playSound("unarchive");
     const result = await unarchiveThreadMutation({
       environmentId: target.environmentId,
       input: { threadId: target.threadId },
@@ -387,6 +389,7 @@ export function useThreadActions() {
       currentRouteThreadRef?.threadId === threadRef.threadId &&
       currentRouteThreadRef.environmentId === threadRef.environmentId;
     const action = ThreadUndo.begin("archive", scopedThreadKey(threadRef));
+    playSound("archive");
     const archiveResult = await archiveThreadMutation({
       environmentId: threadRef.environmentId,
       input: { threadId: threadRef.threadId },
@@ -545,6 +548,7 @@ export function useThreadActions() {
       deletedThreadIds,
       sortOrder: sidebarThreadSortOrder,
     });
+    playSound("delete");
     const deleteResult = await deleteThreadMutation({
       environmentId: threadRef.environmentId,
       input: { threadId: threadRef.threadId },
@@ -652,6 +656,7 @@ export function useThreadActions() {
       );
     }
     ThreadUndo.invalidate("settle", scopedThreadKey(target));
+    playSound("unsettle");
     // reason "user" pins active until real activity, suppressing auto-settle.
     return unsettleThreadMutation({
       environmentId: target.environmentId,
@@ -692,6 +697,7 @@ export function useThreadActions() {
     // Pinning clears snooze, so older Settled or Snoozed undos would fight this pin.
     ThreadUndo.invalidate("settle", scopedThreadKey(target));
     ThreadUndo.invalidate("snooze", scopedThreadKey(target));
+    playSound("pin");
     return pinThreadMutation({
       environmentId: target.environmentId,
       input: {
@@ -715,6 +721,7 @@ export function useThreadActions() {
     const thread = readThreadShell(target);
     const undoPlan = ThreadUndo.planThreadUndo("unpin", thread);
     const action = ThreadUndo.begin("pin", scopedThreadKey(target));
+    playSound("unpin");
     const result = await unpinThreadMutation({
       environmentId: target.environmentId,
       input: { threadId: target.threadId },
@@ -753,6 +760,7 @@ export function useThreadActions() {
     ThreadUndo.invalidate("pin", scopedThreadKey(target));
     ThreadUndo.invalidate("snooze", scopedThreadKey(target));
     const action = ThreadUndo.begin("settle", scopedThreadKey(target));
+    playSound("settle");
     const result = await settleThreadMutation({
       environmentId: target.environmentId,
       input: { threadId: target.threadId },
@@ -839,6 +847,7 @@ export function useThreadActions() {
       );
     }
     ThreadUndo.invalidate("snooze", scopedThreadKey(target));
+    playSound("unsnooze");
     return unsnoozeThreadMutation({
       environmentId: target.environmentId,
       input: { threadId: target.threadId, reason: "user" },
@@ -869,6 +878,7 @@ export function useThreadActions() {
       );
     }
     const action = ThreadUndo.begin("snooze", scopedThreadKey(target));
+    playSound("snooze");
     const result = await snoozeThreadMutation({
       environmentId: target.environmentId,
       input: { threadId: target.threadId, snoozedUntil },

@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import type { ThreadStructure } from "@t3tools/client-runtime/state/shell";
 import {
   AuthOrchestrationOperateScope,
@@ -273,6 +274,7 @@ export function usePendingThreadRequests(input: {
     setRespondingRequestIds((existing) =>
       existing.includes(requestId) ? existing : [...existing, requestId],
     );
+    playSound(decision.startsWith("accept") ? "approve" : "decline");
     const result = await respondToThreadApproval({
       environmentId,
       input: {
@@ -336,6 +338,7 @@ export function usePendingThreadRequests(input: {
     setRespondingUserInputRequestIds((existing) =>
       existing.includes(requestId) ? existing : [...existing, requestId],
     );
+    playSound("answer");
     const result = await respondToThreadUserInput({
       environmentId,
       input: {

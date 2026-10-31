@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import type {
   EnvironmentProject,
   EnvironmentThreadShell,
@@ -149,6 +150,7 @@ export function useChatTerminalActions(input: ChatTerminalActionsInput) {
       !hasTerminalWriteAccess()
     )
       return;
+    playSound(nextOpen ? "panelOpen" : "panelClose");
     if (nextOpen && hasTerminalWriteAccess() && terminalUiState.terminalIds.length === 0) {
       // Server-created setup terminals exist before this client's drawer mounts.
       // Reuse them before allocating a shell from the still-empty UI state.
@@ -184,6 +186,7 @@ export function useChatTerminalActions(input: ChatTerminalActionsInput) {
   const splitTerminalStable = useStableCallback(splitTerminal);
   const createNewTerminal = () => {
     if (!activeThreadRef) return;
+    playSound("terminal");
     const launched = terminalActions.launchTerminal({
       place: (terminalId) => storeNewTerminal(activeThreadRef, terminalId),
     });

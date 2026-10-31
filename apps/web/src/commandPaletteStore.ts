@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { useEffect } from "react";
 import { create } from "zustand";
 
@@ -23,6 +24,7 @@ export function dispatchCommandPalette(action: CommandPaletteUiAction): void {
   const state = useCommandPaletteStore.getState();
   const next = reduceCommandPaletteUiState(state, action);
   if (!state.open && next.open) {
+    playSound("palette");
     // The workspace turns inert before the popup mounts, which blurs the opener.
     returnFocus = {
       element: document.activeElement instanceof HTMLElement ? document.activeElement : null,

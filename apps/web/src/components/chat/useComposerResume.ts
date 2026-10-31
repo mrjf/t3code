@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   type EnvironmentId,
   type ProviderInteractionMode,
@@ -19,7 +20,6 @@ import type { makeThreadErrorSetter } from "../ChatView.logic";
 import { draftSendState } from "./chatViewSend";
 import type { useTimelineFollow } from "./useTimelineFollow";
 import type { useUsageLimitsPanel } from "./useUsageLimitsPanel";
-import { playThemeSound } from "../../soundThemes";
 
 interface ComposerResumeInput {
   readonly environmentId: EnvironmentId;
@@ -121,7 +121,7 @@ export function useComposerResume(input: ComposerResumeInput) {
         interactionMode,
       });
       if (settingsResult._tag === "Failure") return settingsResult;
-      playThemeSound("send");
+      playSound("send");
       const turnResult = await startThreadTurn({
         environmentId,
         input: {

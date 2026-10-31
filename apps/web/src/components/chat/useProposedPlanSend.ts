@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -42,7 +43,6 @@ import {
 import { draftSendState } from "./chatViewSend";
 import type { useLocalDispatchState } from "./useLocalDispatchState";
 import type { useTimelineFollow } from "./useTimelineFollow";
-import { playThemeSound } from "../../soundThemes";
 
 type LocalDispatchState = ReturnType<typeof useLocalDispatchState>;
 
@@ -183,7 +183,7 @@ export function usePlanFollowUpSend(input: PlanFollowUpSendInput) {
         nextInteractionMode,
       );
 
-      playThemeSound("send");
+      playSound("send");
       const startResult = await startThreadTurn({
         environmentId,
         input: {
@@ -322,7 +322,7 @@ export function useImplementPlanInNewThread(input: ImplementPlanInNewThreadInput
       createResult._tag === "Failure" ? createResult : null;
 
     if (failure === null) {
-      playThemeSound("send");
+      playSound("send");
       const startResult = await startThreadTurn({
         environmentId,
         input: {

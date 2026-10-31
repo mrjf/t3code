@@ -1,3 +1,4 @@
+import { gitActionSoundEvent, playSound } from "@t3tools/client-runtime/sound-themes";
 import { useAtomMount } from "@effect/atom-react";
 
 import { EnvironmentProject, EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
@@ -246,6 +247,7 @@ export function useSelectedThreadGitActions() {
   };
 
   const onCheckoutSelectedThreadBranch = async (branch: string) => {
+    playSound("branchSwitch");
     return runSelectedThreadGitMutation(
       "switch_ref",
       "Switching branch",
@@ -359,6 +361,7 @@ export function useSelectedThreadGitActions() {
   const onRunSelectedThreadGitAction = async (
     input: GitActionRequestInput,
   ): Promise<GitRunStackedActionResult | null> => {
+    playSound(gitActionSoundEvent(input.action));
     const actionId = uuidv4();
     return await runSelectedThreadGitMutation(
       "run_change_request",

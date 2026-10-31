@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import type { EnvironmentThreadShell, ThreadStructure } from "@t3tools/client-runtime/state/shell";
 import type { ComposerThreadTarget } from "../../composerDraftStore";
 import type { ComposerHandleRef } from "../../composerHandleContext";
@@ -133,6 +134,7 @@ export function useTimelineRewind(input: TimelineRewindInput) {
       rewindingThreadKeys: new Set(store.rewindingThreadKeys).add(routeThreadKey),
     }));
     setThreadError(activeThread.id, null);
+    playSound("revert");
     const rewind = await rewindToMessage({
       message,
       environmentId,
@@ -178,6 +180,7 @@ export function useTimelineRewind(input: TimelineRewindInput) {
     if (!activeThread || activeEnvironmentUnavailable) return;
     const targetThreadId = newThreadId();
     const targetThreadRef = scopeThreadRef(environmentId, targetThreadId);
+    playSound("fork");
     const result = await forkThreadFromRun({
       environmentId,
       input: {

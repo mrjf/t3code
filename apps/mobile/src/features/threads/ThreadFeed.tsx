@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { Button } from "../../components/ui/Button";
 import * as Dialog from "../../components/ui/Dialog";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";
@@ -451,6 +452,7 @@ function AssistantForkButton(props: {
         const targetThreadId = ThreadId.make(uuidv4());
         setBusy(true);
         void Haptics.selectionAsync();
+        playSound("fork");
         void forkFromRun({
           environmentId: props.environmentId,
           input: {

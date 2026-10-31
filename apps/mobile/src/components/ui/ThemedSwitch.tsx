@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { Platform, Switch } from "react-native";
 
 import { NativeSwitch } from "./NativeSwitch";
@@ -5,7 +6,14 @@ import type { ThemedSwitchProps } from "./NativeSwitch.types";
 
 export type { ThemedSwitchProps } from "./NativeSwitch.types";
 
-export function ThemedSwitch(props: ThemedSwitchProps) {
+export function ThemedSwitch({ onValueChange, ...rest }: ThemedSwitchProps) {
+  const props = {
+    ...rest,
+    onValueChange: (value: boolean) => {
+      playSound(value ? "switchOn" : "switchOff");
+      return onValueChange?.(value);
+    },
+  };
   if (Platform.OS === "android") {
     return <NativeSwitch {...props} />;
   }

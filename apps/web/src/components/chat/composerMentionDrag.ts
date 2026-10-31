@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { PullRequestContextMetadata } from "@t3tools/contracts";
 import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
 import { Option, Schema } from "effect";
@@ -83,6 +84,7 @@ export function makeComposerMentionDragHandlers(
       if (!claim(event)) {
         return;
       }
+      playSound("drop");
       host.setDragActive(false);
       if (event.dataTransfer.types.includes(COMPOSER_PULL_REQUEST_DRAG_TYPE)) {
         const pullRequest = decodePullRequestPayload(

@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { sourceControlClients } from "@t3tools/client-runtime/source-control-clients";
 import { scopeThreadRef } from "@t3tools/client-runtime/environment";
 import {
@@ -834,13 +835,16 @@ function SortableTabList(props: {
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
     const toIndex = surfaces.findIndex((surface) => surface.id === over.id);
-    if (toIndex >= 0) onMove?.(String(active.id), toIndex);
+    if (toIndex < 0) return;
+    playSound("drop");
+    onMove?.(String(active.id), toIndex);
   };
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       modifiers={TAB_DRAG_MODIFIERS}
+      onDragStart={() => playSound("dragStart")}
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={surfaceIds} strategy={horizontalListSortingStrategy}>

@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import type { ChatComposerProps } from "./ChatComposer";
 import {
   type ChatFileAttachment,
@@ -113,6 +114,15 @@ export function useComposerAttachmentIntake(input: {
   });
 
   const addComposerAttachments = async (
+    files: File[],
+    options?: Parameters<typeof intakeAttachments>[1],
+  ): Promise<boolean> => {
+    const added = await intakeAttachments(files, options);
+    if (added) playSound("attach");
+    return added;
+  };
+
+  const intakeAttachments = async (
     files: File[],
     options?: {
       readonly source?: ChatFileAttachment["source"];

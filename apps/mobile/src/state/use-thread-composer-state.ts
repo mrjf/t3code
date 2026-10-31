@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { useComposerAttachmentActions } from "./use-composer-attachment-actions";
 import * as Dialog from "../components/ui/Dialog";
 import { AuthOrchestrationOperateScope } from "@t3tools/contracts";
@@ -106,7 +107,6 @@ import { enqueueThreadOutboxMessage } from "./thread-outbox";
 import { dispatchingQueuedMessageIdAtom, useThreadOutboxMessages } from "./use-thread-outbox";
 import { threadEnvironment } from "./threads";
 import { useAtomCommand } from "./use-atom-command";
-import { playThemeSound } from "../lib/soundThemes";
 
 const EMPTY_QUEUE_WORKFLOW_ATOM = Atom.make<null>(null).pipe(
   Atom.withLabel("mobile-thread-queue-workflow:empty"),
@@ -659,7 +659,7 @@ export function useThreadComposerState() {
     const metadata = makeQueuedMessageMetadata();
     const messageId = MessageId.make(metadata.messageId);
     clearThreadComposerError(threadKey);
-    playThemeSound("send");
+    playSound(followUpDispatchMode === "queue" ? "queue" : "send");
     const enqueuePromise = enqueueThreadOutboxMessage({
       environmentId: selectedThreadShell.environmentId,
       threadId: selectedThreadShell.id,
@@ -725,6 +725,7 @@ export function useThreadComposerState() {
     if (!selectedThreadKey) {
       return;
     }
+    playSound("modeChange");
     const modelSelection =
       getComposerDraftSnapshot(selectedThreadKey).modelSelection ?? selectedThread?.modelSelection;
     const provider = selectedEnvironmentRuntime?.serverConfig?.providers.find(

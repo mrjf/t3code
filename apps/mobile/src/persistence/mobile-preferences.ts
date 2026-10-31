@@ -80,6 +80,7 @@ export type WorkspaceSelections = typeof WorkspaceSelections.Type;
 
 const isThreadListFilters = Schema.is(ThreadListFilters);
 const isSoundTheme = Schema.is(SoundTheme);
+const isSoundEvents = Schema.is(Schema.Record(Schema.String, Schema.Boolean));
 const isWorkspaceSelections = Schema.is(WorkspaceSelections);
 const isPullRequestListPreferences = Schema.is(PullRequestListPreferences);
 const ThreadProject = Schema.Struct({
@@ -107,6 +108,8 @@ export interface Preferences {
   readonly mathRenderingEnabled?: boolean;
   readonly soundTheme?: SoundTheme;
   readonly typingSoundTheme?: SoundTheme;
+  /** Sparse per-event overrides; missing events use their default. */
+  readonly soundEvents?: Readonly<Record<string, boolean>>;
   /** Unset means on: crash reports are sent unless the user turns them off. */
   readonly crashReportsEnabled?: boolean;
   readonly connectOnboardingOptOutAccounts?: ReadonlyArray<string>;
@@ -191,6 +194,7 @@ function sanitizePreferences(parsed: Preferences): Preferences {
     mathRenderingEnabled?: boolean;
     soundTheme?: SoundTheme;
     typingSoundTheme?: SoundTheme;
+    soundEvents?: Readonly<Record<string, boolean>>;
     crashReportsEnabled?: boolean;
     connectOnboardingOptOutAccounts?: ReadonlyArray<string>;
     collapsedProjectGroups?: readonly string[];
@@ -283,6 +287,7 @@ function sanitizePreferences(parsed: Preferences): Preferences {
     preferences.mathRenderingEnabled = parsed.mathRenderingEnabled;
   if (isSoundTheme(parsed.soundTheme)) preferences.soundTheme = parsed.soundTheme;
   if (isSoundTheme(parsed.typingSoundTheme)) preferences.typingSoundTheme = parsed.typingSoundTheme;
+  if (isSoundEvents(parsed.soundEvents)) preferences.soundEvents = parsed.soundEvents;
   if (typeof parsed.crashReportsEnabled === "boolean") {
     preferences.crashReportsEnabled = parsed.crashReportsEnabled;
   }

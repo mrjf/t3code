@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import type { ToolCallDiffTarget } from "../../diffPanelStore";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import type { ThreadPreviewState } from "../../previewStateStore";
@@ -102,6 +103,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
     if (!isServerThread) {
       return;
     }
+    playSound(diffOpen ? "panelClose" : "panelOpen");
     if (!diffOpen) {
       onDiffPanelOpen?.();
     }
@@ -220,6 +222,7 @@ export function useRightPanelActions(input: RightPanelActionsInput) {
   const activateRightPanelSurfaceStable = useStableCallback(activateRightPanelSurface);
   const toggleRightPanel = () => {
     if (!activeThreadRef) return;
+    playSound(rightPanelOpen ? "panelClose" : "panelOpen");
     if (rightPanelOpen) {
       closePreviewPanel();
       return;

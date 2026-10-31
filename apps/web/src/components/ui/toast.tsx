@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { Spinner } from "~/components/ui/spinner";
 
 import { Toast } from "@base-ui/react/toast";
@@ -84,6 +85,10 @@ function createBufferedToastManager(): BaseToastManager {
   });
   return {
     ...manager,
+    add(options) {
+      playSound("toast");
+      return manager.add(options);
+    },
     " subscribe"(listener) {
       listeners.add(listener);
       for (const event of pending.splice(0)) listener(event);

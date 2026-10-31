@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   getPromptControlledTraits,
   getTraitSelectChange,
@@ -1540,8 +1541,10 @@ export function ExistingThreadSettingsRouteScreen({
         option.selection.instanceId === modelSelection.instanceId &&
         option.selection.model === modelSelection.model,
     ) ?? null;
-  const updateModelSelection = (selection: ModelSelection) =>
+  const updateModelSelection = (selection: ModelSelection) => {
+    playSound("modelChange");
     updateThreadDraftModelSelection(threadKey, selection, serverConfig?.providers ?? []);
+  };
 
   return (
     <ThreadSettingsPickerScreen

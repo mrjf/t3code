@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import * as Dialog from "../../components/ui/Dialog";
 import { useRememberThreadProject } from "./useRememberThreadProject";
 import { useOpenPullRequest } from "../../native/useOpenPullRequest";
@@ -114,7 +115,6 @@ import {
 } from "./thread-inspector-preview";
 import type { ThreadInspectorTarget } from "./thread-inspector-navigation";
 import { useSelectWorkspaceDetail } from "../workspace/useSelectWorkspaceDetail";
-import { playThemeSound } from "../../lib/soundThemes";
 
 function InspectorPaneRoleActivation() {
   useAdaptiveWorkspacePaneRole("inspector");
@@ -673,7 +673,7 @@ function ThreadRouteContent(
     ) {
       return;
     }
-    playThemeSound("interrupt");
+    playSound("interrupt");
     return interruptThreadTurn({
       environmentId: selectedThread.environmentId,
       input: {
@@ -701,6 +701,7 @@ function ThreadRouteContent(
       return;
     }
 
+    playSound("terminal");
     void navigation.navigate("ThreadTerminal", {
       environmentId: String(selectedThread.environmentId),
       threadId: String(selectedThread.id),

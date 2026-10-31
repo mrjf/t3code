@@ -1,5 +1,7 @@
 import {
   type ActiveSoundTheme,
+  isSoundEventEnabled,
+  setSoundPlayer,
   type SoundEvent,
   type TypingSound,
   typingSoundForKey,
@@ -22,13 +24,16 @@ const soundUrls = import.meta.glob<string>("./assets/sounds/*/*.mp3", {
   eager: true,
 });
 
-function soundUrl(theme: ActiveSoundTheme, sound: SoundEvent | TypingSound): string | undefined {
-  return soundUrls[`./assets/sounds/${theme}/${sound}.mp3`];
+export type ThemeSound = SoundEvent | { readonly typing: TypingSound };
+
+function soundUrl(theme: ActiveSoundTheme, sound: ThemeSound): string | undefined {
+  const name = typeof sound === "string" ? sound : `typing-${sound.typing}`;
+  return soundUrls[`./assets/sounds/${theme}/${name}.mp3`];
 }
 
-export function playThemeSound(event: SoundEvent): void {
-  const theme = getClientSettings().soundTheme;
-  if (theme === "off") return;
+function playThemeSound(event: SoundEvent): void {
+  const { soundTheme: theme, soundEvents } = getClientSettings();
+  if (theme === "off" || !isSoundEventEnabled(event, soundEvents)) return;
   const url = soundUrl(theme, event);
   if (url) void playSoundUrl(url, () => getClientSettings().soundTheme === theme);
 }
@@ -47,10 +52,7 @@ export function playAlertSound(event: SoundEvent): void {
 }
 
 /** Settings previews run inside a click, so they can wait for the unlock. */
-export async function previewSound(
-  theme: SoundTheme,
-  sound: SoundEvent | TypingSound,
-): Promise<void> {
+export async function previewSound(theme: SoundTheme, sound: ThemeSound): Promise<void> {
   if (theme === "off") return;
   const url = soundUrl(theme, sound);
   if (!url) return;
@@ -62,8 +64,8 @@ function onTypingKey(event: KeyboardEvent) {
   const theme = getClientSettings().typingSoundTheme;
   if (theme === "off" || event.repeat || event.isComposing) return;
   if (event.metaKey || event.ctrlKey || !isEditableFocused(event.target)) return;
-  const sound = typingSoundForKey(event.key);
-  const url = sound && soundUrl(theme, sound);
+  const typing = typingSoundForKey(event.key);
+  const url = typing && soundUrl(theme, { typing });
   if (!url) return;
   // A few cents of drift keeps a run of keystrokes from sounding like a machine gun.
   const detune = (Math.random() - 0.5) * 120;
@@ -96,8 +98,10 @@ export function startSoundThemes(): () => void {
   };
   const unsubscribe = subscribeClientSettings(sync);
   sync();
+  setSoundPlayer(playThemeSound);
   return () => {
     unsubscribe();
     setListening(false);
+    setSoundPlayer(null);
   };
 }

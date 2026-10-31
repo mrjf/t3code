@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import * as Dialog from "../components/ui/Dialog";
 import { useServerConfigs } from "./entities";
 import {
@@ -307,6 +308,7 @@ export function useSelectedThreadRequests() {
     }
 
     setRespondingApprovalId(requestId);
+    playSound(decision.startsWith("accept") ? "approve" : "decline");
     const result = await respondToApproval({
       environmentId: selectedThreadShell.environmentId,
       input: {
@@ -378,6 +380,7 @@ export function useSelectedThreadRequests() {
     }
     userInputResponsesInFlight.current.add(responseKey);
     setRespondingUserInputId(activePendingUserInput.requestId);
+    playSound("answer");
     const result = await respondToUserInput({
       environmentId: selectedThreadShell.environmentId,
       input: {

@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import {
   COMPOSER_MENTION_DRAG_TYPE,
   composerMentionFromTreePath,
@@ -71,6 +72,7 @@ export function createFileTreeDragMentionController(
       }
       draggedPaths = dragged;
       event.dataTransfer.setData(COMPOSER_MENTION_DRAG_TYPE, mentions.join(" "));
+      playSound("dragStart");
     },
     handleDragEnd(deselect) {
       if (draggedPaths.length === 0) {

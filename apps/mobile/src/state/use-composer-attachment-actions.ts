@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import * as Dialog from "../components/ui/Dialog";
 import { useRef } from "react";
 import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS, type ServerConfig } from "@t3tools/contracts";
@@ -42,6 +43,7 @@ export function useComposerAttachmentActions(props: {
       );
       return 0;
     }
+    if (attachments.length > 0) playSound("attach");
     return appendComposerDraftAttachments(key, attachments, { appendReference: true, insertion });
   };
   // A picker may finish after its draft was discarded or the composer moved off it.

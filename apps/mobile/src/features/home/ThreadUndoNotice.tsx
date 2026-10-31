@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { useAndroidFloatingTabs } from "../settings/appearance/AppearancePreferencesProvider";
 import { useState } from "react";
 import { useKeyboardState } from "react-native-keyboard-controller";
@@ -82,6 +83,7 @@ export function ThreadUndoNotice(props: { readonly visible: boolean }) {
         action={{
           label: "Undo",
           onPress: () => {
+            playSound("undo");
             void notice.undo();
           },
         }}

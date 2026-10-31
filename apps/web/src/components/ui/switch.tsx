@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
 
 import { cn } from "~/lib/utils";
@@ -23,6 +24,10 @@ function Switch({
       // Base UI overwrites aria-checked even with undefined; pass it only for mixed state.
       {...(mixed ? { "aria-checked": "mixed" as const } : {})}
       {...props}
+      onCheckedChange={(checked, details) => {
+        playSound(checked ? "switchOn" : "switchOff");
+        props.onCheckedChange?.(checked, details);
+      }}
     >
       <SwitchPrimitive.Thumb
         className={cn(

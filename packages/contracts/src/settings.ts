@@ -359,6 +359,11 @@ export const ClientSettingsSchema = Schema.Struct({
   soundTheme: SoundTheme.pipe(Schema.withDecodingDefault(Effect.succeed("off" as const))),
   // Separate from soundTheme so keystrokes can stay silent while alerts play, or the reverse.
   typingSoundTheme: SoundTheme.pipe(Schema.withDecodingDefault(Effect.succeed("off" as const))),
+  // Sparse on/off overrides per sound event. Missing ids use the client's default,
+  // so new events reach everyone and unknown ids survive a downgrade.
+  soundEvents: Schema.Record(Schema.String, Schema.Boolean).pipe(
+    Schema.withDecodingDefault(Effect.succeed({})),
+  ),
   diffColorScheme: DiffColorScheme.pipe(
     Schema.withDecodingDefault(Effect.succeed("red-green" as const)),
   ),
@@ -1729,6 +1734,7 @@ export const ClientSettingsPatch = Schema.Struct({
   inAppNotificationsEnabled: Schema.optionalKey(Schema.Boolean),
   soundTheme: Schema.optionalKey(SoundTheme),
   typingSoundTheme: Schema.optionalKey(SoundTheme),
+  soundEvents: Schema.optionalKey(Schema.Record(Schema.String, Schema.Boolean)),
   diffColorScheme: Schema.optionalKey(DiffColorScheme),
   chatWidth: Schema.optionalKey(ChatWidth),
   effortDisplay: Schema.optionalKey(EffortDisplay),

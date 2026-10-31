@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import * as React from "react";
 import * as Schema from "effect/Schema";
 import {
@@ -98,6 +99,16 @@ function writeTextWithExecCommand(
 export async function writeTextToClipboard(
   value: string,
   target = "text",
+  extraFlavors?: Readonly<Record<string, string>>,
+): Promise<boolean> {
+  const copied = await writeClipboard(value, target, extraFlavors);
+  if (copied) playSound("copy");
+  return copied;
+}
+
+async function writeClipboard(
+  value: string,
+  target: string,
   extraFlavors?: Readonly<Record<string, string>>,
 ) {
   if (typeof window === "undefined") {

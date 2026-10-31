@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import { StackActions, useNavigation } from "@react-navigation/native";
 import { Platform } from "react-native";
 import { resolveThreadReferenceCopyTarget } from "@t3tools/client-runtime/thread-reference";
@@ -127,6 +128,7 @@ export function HardwareKeyboardCommandProvider({
   const onCommand = useCallback(
     (command: HardwareKeyboardCommand) => {
       if (command === "commandPalette") {
+        playSound("palette");
         setPaletteOpen(true);
         return;
       }

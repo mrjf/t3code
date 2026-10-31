@@ -1,3 +1,4 @@
+import { playSound } from "@t3tools/client-runtime/sound-themes";
 import type { ThreadMoveDestination } from "../threads/threadOrder";
 import type { EnvironmentThreadShell } from "@t3tools/client-runtime/state/shell";
 import * as ThreadUndo from "@t3tools/client-runtime/state/thread-undo";
@@ -106,6 +107,7 @@ function useThreadActionExecutor(
 
     inFlightThreadKeys.current.add(key);
     selectionHaptic();
+    playSound(action);
     const succeeded = await (async () => {
       if (
         (action === "settle" || action === "unsettle") &&
@@ -297,6 +299,7 @@ export function useThreadListActions(): {
       return false;
     }
     snoozeInFlightThreadKeys.current.add(key);
+    playSound("snooze");
     const succeeded = await (async () => {
       if (!environmentConfigLoaded(thread.environmentId)) {
         Dialog.alert(
@@ -355,6 +358,7 @@ export function useThreadListActions(): {
       return false;
     }
     snoozeInFlightThreadKeys.current.add(key);
+    playSound("unsnooze");
     const succeeded = await (async () => {
       if (!environmentConfigLoaded(thread.environmentId)) {
         Dialog.alert(
@@ -413,6 +417,7 @@ export function useThreadListActions(): {
     // Pinning clears snooze, so older Settled or Snoozed undos would fight this pin.
     ThreadUndo.invalidate("settle", scopedThreadKey(thread.environmentId, thread.id));
     ThreadUndo.invalidate("snooze", scopedThreadKey(thread.environmentId, thread.id));
+    playSound("pin");
     const result = await withThreadDismissal(
       scopedThreadKey(thread.environmentId, thread.id),
       () =>
@@ -444,6 +449,7 @@ export function useThreadListActions(): {
       return false;
     }
     selectionHaptic();
+    playSound("unpin");
     const plan = ThreadUndo.planThreadUndo("unpin", thread);
     const claim = ThreadUndo.begin("pin", scopedThreadKey(thread.environmentId, thread.id));
     const result = await withThreadDismissal(
@@ -539,6 +545,7 @@ export function useThreadListActions(): {
       }
       if (resolution.action === "noop") return;
       selectionHaptic();
+      playSound("rename");
       void updateThreadMetadata({
         environmentId: thread.environmentId,
         input: { threadId: thread.id, title: resolution.title },

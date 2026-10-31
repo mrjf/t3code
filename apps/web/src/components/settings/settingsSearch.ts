@@ -329,7 +329,9 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "sound-theme",
     title: "Sound theme",
     to: "/settings/appearance",
-    searchTerms: ["sound audio pack crispy gooey send stop done alert chime notification"],
+    searchTerms: [
+      "sound audio pack crispy gooey send stop done alert chime notification events drag drop archive pin git commit copy toast",
+    ],
   },
   {
     id: "typing-sounds",
