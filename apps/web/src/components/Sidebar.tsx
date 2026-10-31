@@ -218,6 +218,7 @@ import {
 import { deriveProviderEntriesByEnvironment } from "../providerInstances";
 import { useStableCallback } from "../hooks/useStableCallback";
 import {
+  resolveRouteRevealProject,
   resolveSidebarRouteReveal,
   type SidebarRouteReveal,
   useActiveRowReveal,
@@ -229,17 +230,12 @@ import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { SidebarProjectRail } from "./sidebar/SidebarProjectRail";
-import { useTheme } from "../hooks/useTheme";
 import {
-  applyProjectLook,
   projectThemeOptions,
-  resolveProjectLook,
   resolveProjectThemeChoice,
-  setActiveProjectArtwork,
-  useProjectAppearance,
-  useProjectArtwork,
   useProjectThemeChoices,
 } from "../projectTheme";
+import { useActiveProjectLook } from "./ProjectLookProvider";
 import { TooltipProvider } from "./ui/tooltip";
 import { composerDraftHasUserContent, DraftId, useComposerDraftStore } from "../composerDraftStore";
 import { useThreadRouteTarget } from "../hooks/useThreadRouteTarget";
@@ -1071,18 +1067,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     delegatedUnderParent,
     findThread: (key) => threads.find((candidate) => threadShellKey(candidate) === key),
   });
-  // A thread opened outside the scope switches the app to its project, not to all projects.
-  const revealThread = revealWidensScope
-    ? threads.find((candidate) => threadShellKey(candidate) === routeRowThreadKey)
-    : undefined;
-  const revealGroup = revealThread
-    ? (scopeGroups.find((group) =>
-        group.memberProjectRefs.some(
-          (ref) =>
-            ref.environmentId === revealThread.environmentId &&
-            ref.projectId === revealThread.projectId,
-        ),
-      ) ?? null)
+  const revealGroup = revealWidensScope
+    ? resolveRouteRevealProject(
+        threads.find((candidate) => threadShellKey(candidate) === routeRowThreadKey),
+        scopeGroups,
+      )
     : null;
   const revealProjectKey = revealGroup?.projectKey ?? null;
   const projectScopeKeys = revealWidensScope
@@ -1135,46 +1124,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     : chosenScopeProjectKeys;
   const switchToProject = useSwitchToProject();
   const [projectThemeChoices, setProjectThemeChoice] = useProjectThemeChoices();
-  const { resolvedTheme: userAppearance } = useTheme();
-  const themedProject = scopedProjectGroups.length === 1 ? scopedProjectGroups[0]! : null;
-  const themedProjectRef = themedProject
-    ? {
-        environmentId: themedProject.environmentId,
-        projectId: themedProject.id,
-        workspaceRoot: themedProject.workspaceRoot,
-      }
-    : null;
-  const projectAppearance = useProjectAppearance(themedProjectRef);
-  const projectArtwork = useProjectArtwork(themedProjectRef, projectAppearance);
-  const projectThemeChoice = themedProject
-    ? resolveProjectThemeChoice(
-        themedProject.projectKey,
-        projectAppearance !== null,
-        projectThemeChoices,
-      )
-    : "none";
-  const projectLook = themedProject
-    ? resolveProjectLook({
-        choice: projectThemeChoice,
-        projectAppearance,
-        appearance: userAppearance,
-      })
-    : null;
-  // A string key keeps the effect from repainting on every render.
-  const projectLookKey = projectLook ? JSON.stringify(projectLook) : null;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- paints the chosen project's look onto the document root and restores the user's theme after
-  useEffect(() => {
-    if (projectLookKey === null) return;
-    return applyProjectLook(JSON.parse(projectLookKey));
-  }, [projectLookKey]);
-  const activeArtwork = projectThemeChoice === "project" ? projectArtwork : null;
-  const activeArtworkKey = activeArtwork ? JSON.stringify(activeArtwork) : null;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- publishes the project's artwork to the sidebar header and canvas outside this component
-  useEffect(() => {
-    if (activeArtworkKey === null) return;
-    setActiveProjectArtwork(JSON.parse(activeArtworkKey));
-    return () => setActiveProjectArtwork(null);
-  }, [activeArtworkKey]);
+  const activeProjectLook = useActiveProjectLook();
   const threadSearch = useThreadSearch(
     connectedEnvironmentIds,
     threadSearchQuery,
@@ -1230,7 +1180,15 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     (group: SidebarProjectSnapshot, position: { x: number; y: number }) => {
       const api = readLocalApi();
       if (!api) return;
-      const themeChoice = resolveProjectThemeChoice(group.projectKey, true, projectThemeChoices);
+      // Only the open project's t3.json is read, so others show just the stored choice.
+      const themeChoice =
+        group.projectKey === activeProjectLook.projectKey
+          ? resolveProjectThemeChoice(
+              group.projectKey,
+              activeProjectLook.hasProjectLook,
+              projectThemeChoices,
+            )
+          : (projectThemeChoices[group.projectKey] ?? null);
       void (async () => {
         const clicked = await settlePromise(() =>
           api.contextMenu.show(
@@ -1248,11 +1206,16 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 id: "theme",
                 label: "Theme",
                 children: [
-                  {
-                    id: "theme:project",
-                    label: "Project's look",
-                    checked: themeChoice === "project",
-                  },
+                  ...(group.projectKey === activeProjectLook.projectKey &&
+                  !activeProjectLook.hasProjectLook
+                    ? []
+                    : [
+                        {
+                          id: "theme:project",
+                          label: "Project's look",
+                          checked: themeChoice === "project",
+                        },
+                      ]),
                   { id: "theme:none", label: "My theme", checked: themeChoice === "none" },
                   ...projectThemeOptions().map((theme, index) => ({
                     id: `theme:${theme.id}`,
@@ -2976,10 +2939,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           <SidebarProjectRail
             projects={scopeGroups}
             selectedKeys={projectScopeKeys}
-            onSelect={(key) => {
-              clearSelection();
-              switchToProject(scopeGroups.find((group) => group.projectKey === key) ?? null);
-            }}
+            onSelect={(key) =>
+              switchToProject(scopeGroups.find((group) => group.projectKey === key) ?? null)
+            }
+            mascot={activeProjectLook.mascot}
             onToggle={toggleProjectScopeKey}
             onProjectContextMenu={handleProjectFolderContextMenu}
             onAddProject={openAddProjectCommandPalette}
@@ -2993,7 +2956,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 <SidebarThreadHeader
                   searchFieldRef={headerSearchRef}
                   hasProjects={projectGroups.length > 0}
-                  onNewProject={openAddProjectCommandPalette}
+                  onNewProject={scopeGroups.length > 1 ? null : openAddProjectCommandPalette}
                   onNewThread={handleNewThreadClick}
                   newThreadDisabled={projects.length === 0}
                   newThreadShortcutLabel={newThreadShortcutLabel}

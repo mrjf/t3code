@@ -1,14 +1,10 @@
-import { useAtomValue } from "@effect/atom-react";
-import { useSyncExternalStore } from "react";
-import type { ProjectReadFileResult, ScopedProjectRef } from "@t3tools/contracts";
+import type { T3ProjectFileAppearance } from "@t3tools/contracts";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
-import * as Option from "effect/Option";
-import { AsyncResult, Atom } from "effect/reactivity";
 import * as Schema from "effect/Schema";
 
+import { appearanceFontStack } from "./appearanceFonts";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { refreshTheme } from "./hooks/useTheme";
-import { projectEnvironment } from "./state/projects";
 import {
   applyThemeColorPreview,
   getCustomThemes,
@@ -23,92 +19,6 @@ const ProjectThemeChoices = Schema.Record(Schema.String, Schema.String);
 
 /** "project" uses the look the repository declares in t3.json; "none" keeps the user's theme. */
 export type ProjectThemeChoice = "project" | "none" | (string & {});
-
-const HexColor = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/));
-const AppearanceColors = Schema.Struct({ background: HexColor, accent: HexColor });
-const ProjectAppearance = Schema.Struct({
-  font: Schema.optional(Schema.String),
-  wallpaper: Schema.optional(Schema.String),
-  wallpaperTone: Schema.optional(Schema.Literals(["light", "dark"])),
-  mascot: Schema.optional(Schema.String),
-  light: Schema.optional(AppearanceColors),
-  dark: Schema.optional(AppearanceColors),
-});
-type ProjectAppearance = typeof ProjectAppearance.Type;
-const decodeProjectFile = Schema.decodeUnknownOption(
-  Schema.fromJsonString(Schema.Struct({ appearance: Schema.optional(ProjectAppearance) })),
-);
-
-const NO_PROJECT_FILE = Atom.make(AsyncResult.initial<ProjectReadFileResult, never>(false));
-
-/** The `appearance` block of the project's t3.json, if it has one. */
-export function useProjectAppearance(
-  project: (ScopedProjectRef & { readonly workspaceRoot: string }) | null,
-): ProjectAppearance | null {
-  const contents = useProjectFile(project, "t3.json");
-  return contents === null
-    ? null
-    : (Option.getOrUndefined(decodeProjectFile(contents))?.appearance ?? null);
-}
-
-function useProjectFile(
-  project: (ScopedProjectRef & { readonly workspaceRoot: string }) | null,
-  relativePath: string | null,
-): string | null {
-  const result = useAtomValue(
-    project && relativePath
-      ? projectEnvironment.readFile({
-          environmentId: project.environmentId,
-          input: { cwd: project.workspaceRoot, relativePath, allowMissing: true },
-        })
-      : NO_PROJECT_FILE,
-  );
-  const file = Option.getOrUndefined(AsyncResult.value(result));
-  return file && file.exists !== false && !file.truncated ? file.contents : null;
-}
-
-// Artwork is SVG so it reads as text; an <img> never runs its scripts.
-function svgDataUrl(contents: string | null): string | null {
-  return contents?.trimStart().startsWith("<svg")
-    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(contents)}`
-    : null;
-}
-
-export interface ProjectArtwork {
-  readonly wallpaper: string | null;
-  readonly wallpaperTone: "light" | "dark";
-  readonly mascot: string | null;
-}
-
-export function useProjectArtwork(
-  project: (ScopedProjectRef & { readonly workspaceRoot: string }) | null,
-  appearance: ProjectAppearance | null,
-): ProjectArtwork | null {
-  const wallpaper = svgDataUrl(useProjectFile(project, appearance?.wallpaper ?? null));
-  const mascot = svgDataUrl(useProjectFile(project, appearance?.mascot ?? null));
-  if (!wallpaper && !mascot) return null;
-  return { wallpaper, wallpaperTone: appearance?.wallpaperTone ?? "light", mascot };
-}
-
-let activeArtwork: ProjectArtwork | null = null;
-const artworkListeners = new Set<() => void>();
-
-export function setActiveProjectArtwork(artwork: ProjectArtwork | null): void {
-  activeArtwork = artwork;
-  for (const listener of artworkListeners) listener();
-}
-
-/** The artwork of the project the app is switched to, for the sidebar header and the canvas. */
-export function useActiveProjectArtwork(): ProjectArtwork | null {
-  return useSyncExternalStore(
-    (listener) => {
-      artworkListeners.add(listener);
-      return () => artworkListeners.delete(listener);
-    },
-    () => activeArtwork,
-    () => null,
-  );
-}
 
 const NO_PROJECT_THEME_CHOICES: Readonly<Record<string, ProjectThemeChoice>> = {};
 
@@ -147,6 +57,9 @@ function readableOn(hex: string): string {
   return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#111111" : "#ffffff";
 }
 
+// index.css sets body text from this, falling back to the user's --font-sans.
+const PROJECT_FONT_VARIABLE = "--project-font-sans";
+
 export type ProjectLook =
   | { readonly kind: "palette"; readonly colors: ThemeColors; readonly appearance: ThemeAppearance }
   | { readonly kind: "tint"; readonly variables: Readonly<Record<string, string>> };
@@ -154,7 +67,7 @@ export type ProjectLook =
 /** A chosen theme replaces the palette; the project's own look tints the user's theme. */
 export function resolveProjectLook(input: {
   choice: ProjectThemeChoice;
-  projectAppearance: ProjectAppearance | null;
+  projectAppearance: T3ProjectFileAppearance | null;
   appearance: ThemeAppearance;
 }): ProjectLook | null {
   const { choice, projectAppearance, appearance } = input;
@@ -168,8 +81,8 @@ export function resolveProjectLook(input: {
       : { kind: "palette", colors: theme.colors, appearance: theme.appearance };
   }
   if (!projectAppearance) return null;
-  const brand = projectAppearance[appearance];
   const variables: Record<string, string> = {};
+  const brand = projectAppearance[appearance];
   if (brand) {
     for (const name of [
       "--background",
@@ -183,8 +96,13 @@ export function resolveProjectLook(input: {
     variables["--primary-foreground"] = readableOn(brand.accent);
     variables["--ring"] = brand.accent;
   }
-  if (projectAppearance.font) variables["--font-sans"] = projectAppearance.font;
-  return { kind: "tint", variables };
+  if (projectAppearance.font) {
+    variables[PROJECT_FONT_VARIABLE] = appearanceFontStack(
+      projectAppearance.font,
+      "var(--font-sans)",
+    );
+  }
+  return Object.keys(variables).length > 0 ? { kind: "tint", variables } : null;
 }
 
 /** Paints the look onto the document root and returns how to undo it. */
@@ -195,14 +113,16 @@ export function applyProjectLook(look: ProjectLook): () => void {
   }
   // Inline styles outrank the stylesheet's theme selectors without touching the user's theme.
   const style = document.documentElement.style;
-  const previous = Object.keys(look.variables).map(
-    (name) => [name, style.getPropertyValue(name)] as const,
-  );
   for (const [name, value] of Object.entries(look.variables)) style.setProperty(name, value);
   return () => {
-    for (const [name, value] of previous) {
-      if (value) style.setProperty(name, value);
-      else style.removeProperty(name);
-    }
+    for (const name of Object.keys(look.variables)) style.removeProperty(name);
   };
+}
+
+/** A light wallpaper would leave light-on-light text in dark appearance, so it only shows in light. */
+export function showsProjectWallpaper(
+  tone: T3ProjectFileAppearance["wallpaperTone"],
+  appearance: ThemeAppearance,
+): boolean {
+  return tone === "dark" || appearance === "light";
 }

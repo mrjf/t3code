@@ -3,9 +3,23 @@
 Use a new thread for a separate task. Choose **New worktree** when its code changes
 need a separate branch and working directory.
 
+## Switch projects
+
+With more than one project, the project rail runs down the left edge of the sidebar. Choose a
+project to switch the whole app to it: the thread list, search and new threads stay in that
+project, and **All projects** at the top shows everything again. Shift-click to show several
+projects at once. With the sidebar closed, the project name in the thread header switches
+projects too. Opening a thread from another project, from a link or the command palette,
+switches to its project.
+
+Right-click a project in the rail to pin it, open its settings, or choose its theme. A project
+whose `t3.json` declares an `appearance` gets its own look while it is open; choose **My theme**
+there to keep yours. See [Project settings](./project-settings.md#project-appearance).
+
 ## Start a thread
 
-On web and desktop, a new thread keeps the current project and carries your model
+On web and desktop, a new thread starts in the project you switched to in the project
+rail, or else keeps the current project. It carries your model
 and mode selections, unless the destination project has its own model default.
 Its branch and workspace mode come from your configured defaults. To continue in
 an existing worktree, use **New thread in this worktree** from the branch toolbar.

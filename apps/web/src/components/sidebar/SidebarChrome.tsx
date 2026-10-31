@@ -13,7 +13,7 @@ import {
 } from "../../navigationHistory";
 import { primaryServerKeybindingsAtom } from "../../state/server";
 import { cn } from "../../lib/utils";
-import { useActiveProjectArtwork } from "../../projectTheme";
+import { useActiveProjectLook } from "../ProjectLookProvider";
 import { usePullRequestsSupported } from "../../state/environments";
 import { T3Wordmark } from "../T3Wordmark";
 import {
@@ -57,11 +57,14 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
       ? resolveEnvironmentIdentificationPillLabel(stageLabel)
       : null;
 
-  const projectArtwork = useActiveProjectArtwork();
-  const projectWallpaper = projectArtwork?.wallpaper ?? null;
-  const onBackdrop = projectWallpaper
-    ? projectArtwork?.wallpaperTone === "dark"
-    : backdropVariant !== null;
+  const { wallpaper: projectWallpaper, wallpaperDark } = useActiveProjectLook();
+  const onBackdrop = projectWallpaper ? wallpaperDark : backdropVariant !== null;
+  // A wallpaper covers the dev or nightly artwork, so its label moves into the pill.
+  const environmentLabel =
+    pillLabel ??
+    (projectWallpaper && backdropVariant
+      ? resolveEnvironmentIdentificationPillLabel(stageLabel)
+      : null);
 
   return (
     <div
@@ -97,10 +100,10 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
             </div>
           ) : null}
         </div>
-        {pillLabel ? (
+        {environmentLabel ? (
           <div className="ml-1 flex h-7 items-center">
             <Badge data-environment-identification="pill" size="sm" variant="secondary">
-              {pillLabel}
+              {environmentLabel}
             </Badge>
           </div>
         ) : null}

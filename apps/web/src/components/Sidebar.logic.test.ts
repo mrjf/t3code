@@ -57,6 +57,7 @@ import { makeThreadFixture, type ThreadFixtureOverrides } from "../test-fixtures
 import {
   completeSidebarRouteReveal,
   pendingSidebarRouteReveal,
+  resolveRouteRevealProject,
   resolveSidebarRouteReveal,
 } from "./sidebar/routeReveal";
 
@@ -1527,6 +1528,25 @@ describe("pendingSidebarRouteReveal", () => {
     pendingSidebarRouteReveal(reveal, "env:a1");
     expect(pendingSidebarRouteReveal(reveal, null)).toBeNull();
     expect(pendingSidebarRouteReveal(reveal, "env:a1")).toBe("env:a1");
+  });
+});
+
+describe("resolveRouteRevealProject", () => {
+  const app = {
+    projectKey: "app",
+    memberProjectRefs: [
+      { environmentId: EnvironmentId.make("laptop"), projectId: ProjectId.make("app") },
+      { environmentId: EnvironmentId.make("server"), projectId: ProjectId.make("app-server") },
+    ],
+  };
+
+  it.each([
+    ["the project holding the thread on any machine", "server", "app-server", "app"],
+    ["no project for a thread outside every project", "laptop", "scratch", null],
+  ] as const)("finds %s", (_name, environmentId, projectId, expected) => {
+    expect(resolveRouteRevealProject({ environmentId, projectId }, [app])?.projectKey ?? null).toBe(
+      expected,
+    );
   });
 });
 

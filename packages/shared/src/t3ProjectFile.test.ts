@@ -29,4 +29,35 @@ describe("parseT3ProjectFile", () => {
       }`),
     ).toEqual({ defaultThreadEnvMode: "worktree" });
   });
+
+  it("reads an appearance and keeps artwork inside the repository", () => {
+    const appearance = (wallpaper: string) =>
+      parseT3ProjectFile(`{
+        // brand
+        "appearance": {
+          "font": "Inter, sans-serif",
+          "light": { "background": "#f6f7fb", "accent": "#2f5bea" },
+          "wallpaper": ${JSON.stringify(wallpaper)},
+          "wallpaperTone": "dark",
+        },
+      }`)?.appearance;
+
+    expect(appearance("assets/wallpaper.svg")).toEqual({
+      font: "Inter, sans-serif",
+      light: { background: "#f6f7fb", accent: "#2f5bea" },
+      wallpaper: "assets/wallpaper.svg",
+      wallpaperTone: "dark",
+    });
+    for (const outside of [
+      "/etc/passwd.svg",
+      "~/.ssh/key.svg",
+      "../other/art.svg",
+      "assets/../../art.svg",
+      "C:/art.svg",
+      "assets\\art.svg",
+      "assets/wallpaper.png",
+    ]) {
+      expect(appearance(outside)).toBeUndefined();
+    }
+  });
 });

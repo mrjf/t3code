@@ -64,7 +64,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 import { appAtomRegistry } from "../rpc/atomRegistry";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
-import { useActiveProjectArtwork } from "../projectTheme";
+import { ProjectLookProvider, useActiveProjectLook } from "./ProjectLookProvider";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -321,9 +321,9 @@ function SidebarControl() {
   const isSidebarVisible = useSidebarVisibility();
   const environmentIdentificationMode = useEnvironmentIdentificationMode();
   const stageBackdropVariant = useSidebarStageBackdropVariant(environmentIdentificationMode);
-  const projectArtwork = useActiveProjectArtwork();
-  const onDarkBackdrop = projectArtwork?.wallpaper
-    ? projectArtwork.wallpaperTone === "dark"
+  const projectLook = useActiveProjectLook();
+  const onDarkBackdrop = projectLook.wallpaper
+    ? projectLook.wallpaperDark
     : stageBackdropVariant !== null;
   const shortcutLabel = shortcutLabelForCommand(keybindings, "sidebar.toggle", {
     context: { usagePageOpen },
@@ -406,19 +406,6 @@ function SidebarControl() {
   );
 }
 
-function ProjectMascot() {
-  const mascot = useActiveProjectArtwork()?.mascot;
-  if (!mascot) return null;
-  return (
-    <img
-      alt=""
-      aria-hidden
-      src={mascot}
-      className="pointer-events-none fixed right-5 bottom-5 z-[1] size-16 -rotate-8 select-none drop-shadow-md"
-    />
-  );
-}
-
 export function AppSidebarLayout({ children }: { children: ReactNode }) {
   const sidebarArea = workspaceAreaProps("sidebar", 0, "Threads");
   const [sidebarRouteReveal] = useState<SidebarRouteReveal>(() => ({
@@ -461,41 +448,42 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
   } as CSSProperties;
 
   return (
-    <PanelAnimationSuppressionProvider value={panelAnimationsSuppressed}>
-      <SidebarProvider
-        className="h-dvh! min-h-0!"
-        data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
-        defaultOpen
-        style={sidebarProviderStyle}
-      >
-        <SidebarBrandWidthProbe isElectron={isElectron} onWidthChange={setBrandWidth} />
-        <Sidebar
-          side="left"
-          collapsible="offcanvas"
-          data-app-sidebar=""
-          {...sidebarArea}
-          role="navigation"
-          aria-label="Threads"
-          resizable={{
-            maxWidth: sidebarMaximumWidth,
-            minWidth: sidebarMinimumWidth,
-            shouldAcceptWidth: ({ currentWidth, nextWidth, wrapper }) =>
-              nextWidth <= currentWidth ||
-              wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
-            storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
-            onResize: setSidebarWidth,
-          }}
-          style={windowControlsInsetStyle}
+    <ProjectLookProvider>
+      <PanelAnimationSuppressionProvider value={panelAnimationsSuppressed}>
+        <SidebarProvider
+          className="h-dvh! min-h-0!"
+          data-panel-animations={routePanelAnimationsActive ? "true" : "false"}
+          defaultOpen
+          style={sidebarProviderStyle}
         >
-          <ThreadSidebar routeReveal={sidebarRouteReveal} />
-          <SidebarRail onDoubleClick={resetSidebarWidth} />
-        </Sidebar>
-        {children}
-        <ProjectMascot />
-        <BackgroundThreadAnnouncer />
-        <SidebarControl />
-        {isElectron ? <HistorySwipeNavigation /> : null}
-      </SidebarProvider>
-    </PanelAnimationSuppressionProvider>
+          <SidebarBrandWidthProbe isElectron={isElectron} onWidthChange={setBrandWidth} />
+          <Sidebar
+            side="left"
+            collapsible="offcanvas"
+            data-app-sidebar=""
+            {...sidebarArea}
+            role="navigation"
+            aria-label="Threads"
+            resizable={{
+              maxWidth: sidebarMaximumWidth,
+              minWidth: sidebarMinimumWidth,
+              shouldAcceptWidth: ({ currentWidth, nextWidth, wrapper }) =>
+                nextWidth <= currentWidth ||
+                wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
+              storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+              onResize: setSidebarWidth,
+            }}
+            style={windowControlsInsetStyle}
+          >
+            <ThreadSidebar routeReveal={sidebarRouteReveal} />
+            <SidebarRail onDoubleClick={resetSidebarWidth} />
+          </Sidebar>
+          {children}
+          <BackgroundThreadAnnouncer />
+          <SidebarControl />
+          {isElectron ? <HistorySwipeNavigation /> : null}
+        </SidebarProvider>
+      </PanelAnimationSuppressionProvider>
+    </ProjectLookProvider>
   );
 }

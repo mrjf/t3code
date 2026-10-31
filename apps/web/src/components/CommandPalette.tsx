@@ -1,5 +1,4 @@
 import { threadPullRequestLinkMode } from "@t3tools/client-runtime/thread-pull-request-compatibility";
-import { useUiStateStore } from "../uiStateStore";
 import { visibleThreadPullRequests } from "@t3tools/shared/threadPullRequests";
 
 import {
@@ -90,6 +89,7 @@ import { useAtomValue } from "@effect/atom-react";
 
 import { isDesktopLocalConnectionTarget } from "../connection/desktopLocal";
 import { useDesktopLocalBootstraps } from "../connection/useDesktopLocalBootstraps";
+import { setProjectScope } from "../hooks/useSwitchToProject";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useOpenPanelPullRequestUrl } from "../hooks/useOpenPanelPullRequestUrl";
 import { copyThreadReference } from "../lib/copyThreadReference";
@@ -520,7 +520,6 @@ function OpenCommandPaletteDialog(props: {
     ...targetProject,
     displayName: group.displayName,
   }));
-  const setProjectScopeKeys = useUiStateStore((store) => store.setSidebarProjectScopeKeys);
   const projectGroupByTargetKey = new Map(
     projectPickerEntries.map(({ group, targetProject }) => [
       `${targetProject.environmentId}:${targetProject.id}`,
@@ -752,7 +751,7 @@ function OpenCommandPaletteDialog(props: {
 
   const openProjectFromSearch = async (project: (typeof projects)[number]) => {
     const group = projectGroupByTargetKey.get(`${project.environmentId}:${project.id}`);
-    if (group) setProjectScopeKeys([group.projectKey]);
+    if (group) setProjectScope([group.projectKey]);
     const groupedProjectKeys = group
       ? new Set(
           group.memberProjectRefs.map(
@@ -809,7 +808,7 @@ function OpenCommandPaletteDialog(props: {
         pin: projectPin,
         runProject: async (project) => {
           const group = projectGroupByTargetKey.get(`${project.environmentId}:${project.id}`);
-          if (group) setProjectScopeKeys([group.projectKey]);
+          if (group) setProjectScope([group.projectKey]);
           const contextualRefBelongsToGroup =
             contextualProjectRef !== null &&
             group?.memberProjectRefs.some(

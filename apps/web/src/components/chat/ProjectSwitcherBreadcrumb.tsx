@@ -9,7 +9,6 @@ import { ProjectFavicon } from "../ProjectFavicon";
 import { WorkspaceBreadcrumbText } from "../WorkspaceBreadcrumb";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
 
-/** The breadcrumb's project, as the app's top-level project switcher. */
 export function ProjectSwitcherBreadcrumb(props: {
   activeProject: EnvironmentProject;
   activeProjectName: string | undefined;
@@ -25,7 +24,7 @@ export function ProjectSwitcherBreadcrumb(props: {
         render={
           <button
             type="button"
-            aria-label={`Switch project, current: ${props.activeProjectName}`}
+            aria-label={`${props.activeProjectName ?? "Project"}, switch project`}
             className="inline-flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
           />
         }
@@ -52,9 +51,7 @@ export function ProjectSwitcherBreadcrumb(props: {
           <MenuItem key={group.projectKey} onClick={() => switchToProject(group)}>
             <ProjectFavicon project={group} className="size-4" />
             <span className="min-w-0 flex-1 truncate">{group.displayName}</span>
-            {scopeKeys.length === 1 && scopeKeys[0] === group.projectKey ? (
-              <CheckIcon className="size-3.5" />
-            ) : null}
+            {scopeKeys.includes(group.projectKey) ? <CheckIcon className="size-3.5" /> : null}
           </MenuItem>
         ))}
       </MenuPopup>

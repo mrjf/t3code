@@ -69,6 +69,63 @@ export const T3ProjectFileScript = Schema.Struct({
 });
 export type T3ProjectFileScript = typeof T3ProjectFileScript.Type;
 
+const T3_PROJECT_FILE_FONT_MAX_LENGTH = 200;
+
+const ProjectAppearanceColor = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/)).annotate({
+  description: 'A six-digit hex color, such as "#f6f7fb".',
+});
+
+const ProjectAppearanceColors = Schema.Struct({
+  background: ProjectAppearanceColor.annotate({
+    description: "Background tint for the canvas, toolbar and sidebar.",
+  }),
+  accent: ProjectAppearanceColor.annotate({
+    description: "Accent color for primary actions and focus rings.",
+  }),
+});
+
+// Artwork must stay inside the repository: no absolute, home-relative or parent paths.
+const ProjectArtworkPath = Schema.String.check(
+  Schema.isMaxLength(T3_PROJECT_FILE_PATH_MAX_LENGTH),
+  Schema.isPattern(/^(?![/~\\])(?![A-Za-z]:)(?!.*(?:^|\/)\.\.(?:\/|$))[^\\]+\.svg$/),
+);
+
+export const T3ProjectFileAppearance = Schema.Struct({
+  font: Schema.optionalKey(
+    trimmedNonEmpty(
+      { description: "CSS font-family stack for interface text while this project is open." },
+      T3_PROJECT_FILE_FONT_MAX_LENGTH,
+    ),
+  ),
+  light: Schema.optionalKey(
+    ProjectAppearanceColors.annotate({ description: "Colors in light appearance." }),
+  ),
+  dark: Schema.optionalKey(
+    ProjectAppearanceColors.annotate({ description: "Colors in dark appearance." }),
+  ),
+  wallpaper: Schema.optionalKey(
+    ProjectArtworkPath.annotate({
+      description:
+        'Workspace-relative path to an SVG shown at the top of the sidebar (e.g. "assets/wallpaper.svg").',
+    }),
+  ),
+  wallpaperTone: Schema.optionalKey(
+    Schema.Literals(["light", "dark"]).annotate({
+      description:
+        'Whether the wallpaper is "light" or "dark", so text over it stays readable. A light wallpaper is shown only in light appearance. Defaults to "light".',
+    }),
+  ),
+  mascot: Schema.optionalKey(
+    ProjectArtworkPath.annotate({
+      description: "Workspace-relative path to a small square SVG shown in the project rail.",
+    }),
+  ),
+}).annotate({
+  description:
+    "How T3 Code looks while this project is open. Each user can switch it off from the project's menu.",
+});
+export type T3ProjectFileAppearance = typeof T3ProjectFileAppearance.Type;
+
 export const T3ProjectFile = Schema.Struct({
   $schema: Schema.optionalKey(
     Schema.String.annotate({
@@ -96,6 +153,7 @@ export const T3ProjectFile = Schema.Struct({
         'How new worktrees populate git submodules: "recursive" (the default) initializes nested submodules too, "top-level" initializes only those declared by this repository, and "none" leaves every submodule empty for a setup script to handle. A project or environment setting in T3 Code overrides this.',
     }),
   ),
+  appearance: Schema.optionalKey(T3ProjectFileAppearance),
   scripts: Schema.optionalKey(
     Schema.Array(T3ProjectFileScript)
       .annotate({

@@ -3,45 +3,52 @@ import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import { ProjectFavicon } from "../ProjectFavicon";
+import { SidebarMenuButton } from "../ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { cn } from "~/lib/utils";
 
-function SidebarProjectRailButton(props: {
+function RailButton(props: {
   label: string;
-  selected: boolean;
+  tooltip?: string;
+  selected?: boolean;
   onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLButtonElement>) => void;
   children: ReactNode;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            aria-label={props.label}
-            aria-pressed={props.selected}
-            onClick={props.onClick}
-            onContextMenu={props.onContextMenu}
-            className={cn(
-              "grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-sidebar-muted-foreground outline-none transition-colors hover:bg-sidebar-row-hover hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-              props.selected &&
-                "bg-sidebar-row-hover text-sidebar-foreground ring-2 ring-sidebar-foreground/70 ring-inset",
-            )}
-          />
-        }
-      >
-        {props.children}
-      </TooltipTrigger>
-      <TooltipPopup side="right">{props.label}</TooltipPopup>
-    </Tooltip>
+    <li className="relative flex justify-center">
+      {props.selected ? (
+        <span
+          aria-hidden
+          className="absolute top-1.5 bottom-1.5 left-0 w-1 rounded-r-full bg-sidebar-foreground"
+        />
+      ) : null}
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <SidebarMenuButton
+              size="icon"
+              type="button"
+              isActive={props.selected ?? false}
+              aria-label={props.label}
+              {...(props.selected === undefined ? {} : { "aria-pressed": props.selected })}
+              onClick={props.onClick}
+              onContextMenu={props.onContextMenu}
+            />
+          }
+        >
+          {props.children}
+        </TooltipTrigger>
+        <TooltipPopup side="right">{props.tooltip ?? props.label}</TooltipPopup>
+      </Tooltip>
+    </li>
   );
 }
 
-/** Slack-style column of projects: choosing one scopes the whole sidebar to it. */
+/** Choosing a project scopes the whole app to it. */
 export function SidebarProjectRail(props: {
   projects: readonly SidebarProjectSnapshot[];
   selectedKeys: readonly string[];
+  mascot: string | null;
   onSelect: (projectKey: string | null) => void;
   onToggle: (projectKey: string) => void;
   onProjectContextMenu: (
@@ -51,36 +58,52 @@ export function SidebarProjectRail(props: {
   onAddProject: () => void;
 }) {
   return (
-    <nav
-      aria-label="Projects"
-      className="flex w-13 shrink-0 flex-col items-center gap-2 overflow-y-auto scrollbar-gutter-both border-r border-sidebar-border py-2"
-    >
-      <SidebarProjectRailButton
-        label="All projects"
-        selected={props.selectedKeys.length === 0}
-        onClick={() => props.onSelect(null)}
+    <div className="flex w-12 shrink-0 flex-col items-center border-r border-sidebar-border">
+      <ul
+        aria-label="Projects"
+        className="flex w-full min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto scrollbar-gutter-both py-2"
       >
-        <LayersIcon className="size-4.5" />
-      </SidebarProjectRailButton>
-      {props.projects.map((project) => (
-        <SidebarProjectRailButton
-          key={project.projectKey}
-          label={project.displayName}
-          selected={props.selectedKeys.includes(project.projectKey)}
-          onClick={(event) =>
-            event.shiftKey ? props.onToggle(project.projectKey) : props.onSelect(project.projectKey)
-          }
-          onContextMenu={(event) => {
-            event.preventDefault();
-            props.onProjectContextMenu(project, { x: event.clientX, y: event.clientY });
-          }}
+        <RailButton
+          label="All projects"
+          selected={props.selectedKeys.length === 0}
+          onClick={() => props.onSelect(null)}
         >
-          <ProjectFavicon project={project} className="size-5" />
-        </SidebarProjectRailButton>
-      ))}
-      <SidebarProjectRailButton label="Add project" selected={false} onClick={props.onAddProject}>
-        <PlusIcon className="size-4.5" />
-      </SidebarProjectRailButton>
-    </nav>
+          <LayersIcon />
+        </RailButton>
+        {props.projects.map((project) => (
+          <RailButton
+            key={project.projectKey}
+            label={project.displayName}
+            tooltip={`${project.displayName} · Shift-click to add`}
+            selected={props.selectedKeys.includes(project.projectKey)}
+            onClick={(event) =>
+              event.shiftKey
+                ? props.onToggle(project.projectKey)
+                : props.onSelect(project.projectKey)
+            }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              // The Menu key and Shift+F10 report no pointer position.
+              const fromKeyboard = event.clientX === 0 && event.clientY === 0;
+              const rect = event.currentTarget.getBoundingClientRect();
+              props.onProjectContextMenu(
+                project,
+                fromKeyboard
+                  ? { x: rect.right, y: rect.top }
+                  : { x: event.clientX, y: event.clientY },
+              );
+            }}
+          >
+            <ProjectFavicon project={project} className="size-5" />
+          </RailButton>
+        ))}
+        <RailButton label="Add project" onClick={props.onAddProject}>
+          <PlusIcon />
+        </RailButton>
+      </ul>
+      {props.mascot ? (
+        <img alt="" aria-hidden src={props.mascot} className="mb-3 size-9 -rotate-8 select-none" />
+      ) : null}
+    </div>
   );
 }

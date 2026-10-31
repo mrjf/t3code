@@ -1,5 +1,4 @@
 import type { DraftId } from "~/composerDraftStore";
-import { useUiStateStore } from "~/uiStateStore";
 import { composerDraftHasUserContent, useComposerDraftStore } from "~/composerDraftStore";
 import { resolveEnvironmentMachineKind, type ScopedProjectRef } from "@t3tools/contracts";
 import { scopedProjectKey, scopeProjectRef } from "@t3tools/client-runtime/environment";
@@ -8,6 +7,7 @@ import { FolderPlusIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
 import { useRef, useState } from "react";
 
+import { setProjectScope } from "~/hooks/useSwitchToProject";
 import { openCommandPalette } from "~/commandPaletteBus";
 import { shortcutLabelForCommand } from "~/keybindings";
 import { primaryServerKeybindingsAtom } from "~/state/server";
@@ -101,7 +101,6 @@ export function DraftHeroHeadline({
   const pickerFilter = useComboboxFilter();
   const highlightedPickerValueRef = useRef<string | null>(null);
   const { canPinProjectGroup, toggleProjectGroupPin } = useProjectPin();
-  const setProjectScopeKeys = useUiStateStore((store) => store.setSidebarProjectScopeKeys);
 
   const environmentLabelById = new Map(
     environments.map((environment) => [environment.environmentId, environment.label] as const),
@@ -200,7 +199,7 @@ export function DraftHeroHeadline({
     if (!draftId) {
       return;
     }
-    setProjectScopeKeys([logicalProjectKey]);
+    setProjectScope([logicalProjectKey]);
     pendingScratchRef.current = null;
     const currentDraft = getComposerDraft(draftId);
     if (!composerDraftHasUserContent(currentDraft)) {

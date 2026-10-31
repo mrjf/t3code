@@ -49,9 +49,10 @@ and other phone-only settings ignore the filter.
 ## Pin and archive projects
 
 Pinned projects come first in the project pickers: the project picker on a new thread, the
-new-thread list, the command palette, the sidebar project filter, and mobile. In the boring sidebar, pinned projects get the top
-folders, even with no active threads. Pin or unpin a project from its row in any of those lists,
-or press the thread pin shortcut (`mod+shift+p` by default) on the highlighted row. **Pin
+new-thread list, the command palette, the project rail, and mobile. In the boring sidebar, pinned projects get the top
+folders, even with no active threads. Pin or unpin a project from its row in those lists or by
+right-clicking it in the project rail, or press the thread pin shortcut (`mod+shift+p` by default)
+on the highlighted row. **Pin
 project** in the command palette and **Settings → Projects** work too. A list keeps its order
 while it is open, so a new pin moves up the next time you open it.
 
@@ -183,6 +184,32 @@ selected to override it there) to **Top level only** to stop at the ones the rep
 itself, or **Skip** to leave them for a setup script. It resolves in the same order as the
 workspace default: a `"worktreeSubmodules"` value in the `t3.json` of the branch being checked out
 applies when the project and environment are both on **Inherit**.
+
+## Project appearance
+
+A repository can give T3 Code its own look with an `appearance` block in `t3.json`. It applies
+while the app is switched to that project, on top of your theme:
+
+```json
+{
+  "appearance": {
+    "font": "Inter, sans-serif",
+    "light": { "background": "#f6f7fb", "accent": "#2f5bea" },
+    "dark": { "background": "#0e1018", "accent": "#7b9bff" },
+    "wallpaper": "assets/t3-wallpaper.svg",
+    "wallpaperTone": "dark",
+    "mascot": "assets/t3-mascot.svg"
+  }
+}
+```
+
+The wallpaper shows at the top of the sidebar and the mascot at the bottom of the project rail.
+Both are SVG files inside the repository. Set `wallpaperTone` to `"dark"` for a dark wallpaper so
+text over it stays readable; a light wallpaper only shows in light appearance. An invalid value
+makes the whole `t3.json` invalid, like any other field.
+
+To turn a project's look off, right-click it in the project rail and choose **Theme → My theme**,
+or pick another theme for it there. The choice is stored in this browser.
 
 ## Worktree location
 

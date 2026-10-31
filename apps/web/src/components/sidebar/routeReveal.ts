@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import type { ScopedProjectRef } from "@t3tools/contracts";
 
 import { filterSidebarV2VisibleThreads } from "../Sidebar.logic";
 
@@ -69,4 +70,21 @@ export function resolveSidebarRouteReveal<T extends RevealableThread>(input: {
     filterSidebarV2VisibleThreads([thread], scopedProjectKeys, delegatedUnderParent).length === 0 &&
     filterSidebarV2VisibleThreads([thread], null, delegatedUnderParent).length === 1;
   return { pendingKey, widensScope };
+}
+
+/** A thread opened outside the scope switches the app to its project, not to all projects. */
+export function resolveRouteRevealProject<
+  G extends { readonly memberProjectRefs: ReadonlyArray<ScopedProjectRef> },
+>(
+  thread: { readonly environmentId: string; readonly projectId: string } | undefined,
+  groups: readonly G[],
+): G | null {
+  if (!thread) return null;
+  return (
+    groups.find((group) =>
+      group.memberProjectRefs.some(
+        (ref) => ref.environmentId === thread.environmentId && ref.projectId === thread.projectId,
+      ),
+    ) ?? null
+  );
 }

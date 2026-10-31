@@ -2,7 +2,11 @@ import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environ
 import type { ScopedProjectRef } from "@t3tools/contracts";
 import { useRouter } from "@tanstack/react-router";
 
-import { useQuietThreadShells } from "~/state/entities";
+import { filterSidebarV2VisibleThreads } from "~/components/Sidebar.logic";
+import { useSidebar } from "~/components/ui/sidebar";
+import { appAtomRegistry } from "~/rpc/atomRegistry";
+import { environmentThreadShells } from "~/state/threads";
+import { useThreadSelectionStore } from "~/threadSelectionStore";
 import { buildThreadRouteParams } from "~/threadRoutes";
 import { useUiStateStore } from "~/uiStateStore";
 import { useHandleNewThread } from "./useHandleNewThread";
@@ -14,31 +18,32 @@ interface SwitchableProject {
   readonly memberProjectRefs: ReadonlyArray<ScopedProjectRef>;
 }
 
+/** Every scope change clears the selection: it can hold threads the next scope hides. */
+export function setProjectScope(projectKeys: readonly string[]): void {
+  useThreadSelectionStore.getState().clearSelection();
+  useUiStateStore.getState().setSidebarProjectScopeKeys([...projectKeys]);
+}
+
 /** Scopes the app to a project and opens its latest thread, or a new one. `null` shows all projects. */
 export function useSwitchToProject() {
   const router = useRouter();
-  const threads = useQuietThreadShells();
   const { handleNewThread } = useHandleNewThread();
-  const setScopeKeys = useUiStateStore((store) => store.setSidebarProjectScopeKeys);
+  const { isMobile, setOpenMobile } = useSidebar();
 
   return (project: SwitchableProject | null) => {
-    if (project === null) {
-      setScopeKeys([]);
-      return;
-    }
-    setScopeKeys([project.projectKey]);
-    const members = new Set(
-      project.memberProjectRefs.map((ref) => `${ref.environmentId}:${ref.projectId}`),
+    setProjectScope(project ? [project.projectKey] : []);
+    if (project === null) return;
+    if (isMobile) setOpenMobile(false);
+    // Read at click time so callers don't re-render on every thread change.
+    const visible = filterSidebarV2VisibleThreads(
+      appAtomRegistry.get(environmentThreadShells.quietThreadShellsAtom),
+      new Set(project.memberProjectRefs.map((ref) => `${ref.environmentId}:${ref.projectId}`)),
+      appAtomRegistry.get(environmentThreadShells.delegatedUnderParentAtom),
     );
-    const latest = threads
-      .filter(
-        (thread) =>
-          thread.archivedAt === null && members.has(`${thread.environmentId}:${thread.projectId}`),
-      )
-      .reduce<(typeof threads)[number] | null>(
-        (best, thread) => (best === null || thread.updatedAt > best.updatedAt ? thread : best),
-        null,
-      );
+    const latest = visible.reduce<(typeof visible)[number] | null>(
+      (best, thread) => (best === null || thread.updatedAt > best.updatedAt ? thread : best),
+      null,
+    );
     if (latest) {
       void router.navigate({
         to: "/$environmentId/$threadId",
