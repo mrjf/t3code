@@ -96,6 +96,7 @@ import { newTaskFlowKey } from "./new-task-flow-state";
 import { appAtomRegistry } from "../../state/atom-registry";
 
 import { readEnvironmentScope, useEnvironmentScope } from "../../state/session";
+import { playThemeSound } from "../../lib/soundThemes";
 
 function NewTaskWorkspaceIcon(props: {
   readonly workspaceMode: "local" | "worktree";
@@ -653,6 +654,7 @@ export function NewTaskDraftScreen(props: {
     }
     // Persist locally before clearing or leaving the draft; server setup runs on the thread.
     flow.setSubmitting(true);
+    playThemeSound("send");
     const queued = await settlePromise(() => enqueueThreadOutboxMessage(message));
     flow.setSubmitting(false);
     if (AsyncResult.isFailure(queued)) {

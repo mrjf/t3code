@@ -27,6 +27,10 @@
       "types": "./src/imageAttachmentSize.ts",
       "default": "./src/imageAttachmentSize.ts"
     },
+    "./sound-themes": {
+      "types": "./src/soundThemes.ts",
+      "default": "./src/soundThemes.ts"
+    },
     "./handoff": {
       "types": "./src/handoff.ts",
       "default": "./src/handoff.ts"
@@ -322,6 +326,10 @@
     "./state/thread-sort": {
       "types": "./src/state/threadSort.ts",
       "default": "./src/state/threadSort.ts"
+    },
+    "./state/thread-notification-gate": {
+      "types": "./src/state/threadNotificationGate.ts",
+      "default": "./src/state/threadNotificationGate.ts"
     },
     "./state/thread-inbox": {
       "types": "./src/state/threadInbox.ts",

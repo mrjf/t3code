@@ -263,6 +263,9 @@ export const NotificationMode = Schema.Literals([
 ]);
 export type NotificationMode = typeof NotificationMode.Type;
 
+export const SoundTheme = Schema.Literals(["off", "crispy", "gooey"]);
+export type SoundTheme = typeof SoundTheme.Type;
+
 export const QuitConfirmationMode = Schema.Literals(["direct", "hold", "double-click"]);
 export type QuitConfirmationMode = typeof QuitConfirmationMode.Type;
 const DEFAULT_QUIT_CONFIRMATION_MODE: QuitConfirmationMode = "hold";
@@ -353,6 +356,9 @@ export const ClientSettingsSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
   ),
   inAppNotificationsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
+  soundTheme: SoundTheme.pipe(Schema.withDecodingDefault(Effect.succeed("off" as const))),
+  // Separate from soundTheme so keystrokes can stay silent while alerts play, or the reverse.
+  typingSoundTheme: SoundTheme.pipe(Schema.withDecodingDefault(Effect.succeed("off" as const))),
   diffColorScheme: DiffColorScheme.pipe(
     Schema.withDecodingDefault(Effect.succeed("red-green" as const)),
   ),
@@ -1721,6 +1727,8 @@ export function requiredScopesForProjectMutation(
 export const ClientSettingsPatch = Schema.Struct({
   notificationMode: Schema.optionalKey(NotificationMode),
   inAppNotificationsEnabled: Schema.optionalKey(Schema.Boolean),
+  soundTheme: Schema.optionalKey(SoundTheme),
+  typingSoundTheme: Schema.optionalKey(SoundTheme),
   diffColorScheme: Schema.optionalKey(DiffColorScheme),
   chatWidth: Schema.optionalKey(ChatWidth),
   effortDisplay: Schema.optionalKey(EffortDisplay),

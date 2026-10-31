@@ -3,7 +3,13 @@ import {
   type PendingSubagentRequest,
   presentThreadShell,
 } from "@t3tools/client-runtime/state/models";
+import {
+  createThreadNotificationGate,
+  type ThreadNotificationKind,
+  type ThreadNotificationObservation,
+} from "@t3tools/client-runtime/state/thread-notification-gate";
 import { isShownUnderParent } from "@t3tools/client-runtime/state/threads";
+import { attentionSoundEvent } from "@t3tools/client-runtime/sound-themes";
 import type { AnyRouter } from "@tanstack/react-router";
 import type { EnvironmentId, OrchestrationV2ThreadShell, ThreadId } from "@t3tools/contracts";
 import type { ClientSettings } from "@t3tools/contracts/settings";
@@ -20,21 +26,16 @@ import { getClientSettings, subscribeClientSettings } from "../hooks/useSettings
 import { isWindowsPlatform } from "../lib/utils";
 import { environmentSummaries } from "../state/presentation";
 import { environmentShell } from "../state/shell";
+import { playAlertSound } from "../soundThemes";
 import { environmentThreadShells } from "../state/threads";
 import {
   hasDesktopNotifications,
   hasNotificationSound,
-  playNotificationSound,
   setNotificationBadge,
   threadNotificationTag,
   unlockNotificationAudio,
 } from "../threadNotifications";
 import { resolveSidebarThreadStatus, type SidebarThreadStatus } from "./Sidebar.logic";
-import {
-  createThreadNotificationGate,
-  type ThreadNotificationKind,
-  type ThreadNotificationObservation,
-} from "./ThreadNotificationCoordinator.logic";
 import { toastManager } from "./ui/toast";
 
 interface NotificationState extends ThreadNotificationObservation {
@@ -97,11 +98,7 @@ export function startThreadNotifications(
               : status === "request"
                 ? "Guest request"
                 : "Input needed";
-    if (hasNotificationSound(mode)) {
-      void playNotificationSound(kind, () =>
-        hasNotificationSound(getClientSettings().notificationMode),
-      );
-    }
+    playAlertSound(kind === "completion" ? "complete" : attentionSoundEvent(status));
     if (
       inAppNotificationsEnabled &&
       document.visibilityState === "visible" &&
@@ -285,8 +282,8 @@ export function startThreadNotifications(
   };
 
   const syncEnvironments = () => {
-    const { notificationMode, inAppNotificationsEnabled } = getClientSettings();
-    const enabled = notificationMode !== "off" || inAppNotificationsEnabled;
+    const { notificationMode, inAppNotificationsEnabled, soundTheme } = getClientSettings();
+    const enabled = notificationMode !== "off" || inAppNotificationsEnabled || soundTheme !== "off";
     const environmentIds = enabled ? registry.get(environmentSummaries.environmentIdsAtom) : [];
     const activeIds = new Set(environmentIds);
     for (const [environmentId, entry] of watched) {

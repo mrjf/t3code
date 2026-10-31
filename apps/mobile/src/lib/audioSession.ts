@@ -9,6 +9,7 @@ type AudioSessionToken = {
 
 let owner: AudioSessionToken | null = null;
 let pending = Promise.resolve();
+let interfaceModeSet = false;
 
 // Native session calls are async. Finish an old activation before releasing it
 // or configuring its successor, so it cannot reactivate a released session.
@@ -68,6 +69,7 @@ export function activateAudioSession(
     if (!isAudioSessionOwner(token)) return false;
     // Video configures and activates its own native session, including moviePlayback on iOS.
     if (nativePlayback) return true;
+    interfaceModeSet = false;
     await setAudioModeAsync({
       allowsRecording: token.kind === "recording",
       interruptionMode: "doNotMix",
@@ -155,4 +157,26 @@ export function createAudioPlaybackSession(
       if (playing && token === null) acquire();
     },
   };
+}
+
+/** Interface sounds mix with other audio, follow the silent switch, and never cut off media or recording. */
+export function playInterfaceSound(player: {
+  seekTo(seconds: number): Promise<void>;
+  play(): void;
+}) {
+  if (owner && !owner.released) return;
+  void enqueue(async () => {
+    if (owner && !owner.released) return;
+    if (!interfaceModeSet) {
+      await setAudioModeAsync({
+        allowsRecording: false,
+        interruptionMode: "mixWithOthers",
+        playsInSilentMode: false,
+        shouldPlayInBackground: false,
+      });
+      interfaceModeSet = true;
+    }
+    await player.seekTo(0);
+    player.play();
+  }).catch(() => {});
 }

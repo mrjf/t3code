@@ -48,6 +48,20 @@ The main sidebar, right panel, and terminal drawer open and close immediately by
 in your operating system. Moving between threads always snaps to the selected thread's panel state
 without replaying its transitions.
 
+## Sounds
+
+Pick a **Sound theme** in **Settings → Appearance**, or with **Change sound theme** in the command
+palette. **Crispy** is bright ticks and dings; **Gooey** is soft pops and drips. A theme plays when
+you send or stop a turn, and when a thread finishes, fails, or needs your input or approval. On web
+and desktop it replaces the notification sound from **Settings → General**, so you hear one sound
+per event. On mobile it plays while the app is open; push notifications stay silent then.
+
+**Typing sounds** is a separate choice, so keystrokes can stay quiet while alerts play, or the
+reverse. On web and desktop it plays in any text field; on mobile, in the composer.
+
+Both choices are saved on each device. Browsers start playing only after you click or type on the
+page once. On iOS, sounds follow the silent switch and mix with other audio.
+
 ## Custom themes
 
 On web and desktop, choose **Create theme** to adjust a palette, or import a T3 Code or VS Code

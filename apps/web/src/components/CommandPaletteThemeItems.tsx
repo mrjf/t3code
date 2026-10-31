@@ -1,9 +1,13 @@
+import { SOUND_THEME_LABELS } from "@t3tools/client-runtime/sound-themes";
+import type { SoundTheme } from "@t3tools/contracts/settings";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
-import { MonitorIcon, MoonIcon, PaletteIcon, SunIcon } from "lucide-react";
+import { MonitorIcon, MoonIcon, PaletteIcon, SunIcon, Volume2Icon } from "lucide-react";
 
 import { useCustomThemes } from "../hooks/useCustomThemes";
+import { updateClientSettings, useClientSettings } from "../hooks/useSettings";
 import { useEnvironmentThemeDefinitions } from "../hooks/useEnvironmentTheme";
 import { useTheme } from "../hooks/useTheme";
+import { previewSound } from "../soundThemes";
 import { getThemeDefinition } from "../themePalette";
 import {
   ADDON_ICON_CLASS,
@@ -53,6 +57,8 @@ function useThemeCards() {
   ];
 }
 
+const SOUND_THEME_OPTIONS = Object.keys(SOUND_THEME_LABELS) as SoundTheme[];
+
 export function useCommandPaletteThemeItems() {
   const {
     theme,
@@ -64,6 +70,7 @@ export function useCommandPaletteThemeItems() {
     setThemeHalf,
   } = useTheme();
   const themeCards = useThemeCards();
+  const soundTheme = useClientSettings((settings) => settings.soundTheme);
 
   const changeThemeItem: CommandPaletteSubmenuItem = {
     kind: "submenu",
@@ -159,5 +166,35 @@ export function useCommandPaletteThemeItems() {
     },
   };
 
-  return { changeThemeItem, changeAppearanceItem, themeEditorItem };
+  const changeSoundThemeItem: CommandPaletteSubmenuItem = {
+    kind: "submenu",
+    value: "action:change-sound-theme",
+    searchTerms: ["change sound theme", "sounds", "audio", "crispy", "gooey", "mute"],
+    title: "Change sound theme",
+    icon: <Volume2Icon className={ITEM_ICON_CLASS} />,
+    addonIcon: <Volume2Icon className={ADDON_ICON_CLASS} />,
+    groups: [
+      {
+        value: "sound-themes",
+        label: "Change sound theme",
+        items: SOUND_THEME_OPTIONS.map((option) => ({
+          kind: "action",
+          value: `sound-theme:${option}`,
+          title: SOUND_THEME_LABELS[option],
+          searchTerms: [SOUND_THEME_LABELS[option], "sound", "audio"],
+          icon: <Volume2Icon className={ITEM_ICON_CLASS} />,
+          titleTrailingContent:
+            soundTheme === option ? (
+              <span className="text-xs text-muted-foreground/70">Current</span>
+            ) : undefined,
+          run: async () => {
+            void previewSound(option, "complete");
+            await updateClientSettings({ soundTheme: option });
+          },
+        })),
+      },
+    ],
+  };
+
+  return { changeThemeItem, changeAppearanceItem, changeSoundThemeItem, themeEditorItem };
 }

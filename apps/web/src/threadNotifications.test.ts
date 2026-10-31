@@ -76,4 +76,14 @@ describe("playNotificationSound", () => {
 
     expect(audio.started).toBe(1);
   });
+
+  it("stacks overlapping keystrokes instead of coalescing them", async () => {
+    const { playSoundUrl } = await loadUnlocked();
+
+    await Promise.all(
+      Array.from({ length: 3 }, () => playSoundUrl("key.mp3", () => true, { overlap: true })),
+    );
+
+    expect(audio.started).toBe(3);
+  });
 });

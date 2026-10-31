@@ -86,18 +86,23 @@ const buffers = new Map<string, Promise<AudioBuffer>>();
 const playingUntil = new Map<string, number>();
 
 /** Called from a gesture so browsers allow later background playback. */
-export function unlockNotificationAudio() {
+export function unlockNotificationAudio(): Promise<void> {
   audioContext ??= new AudioContext();
-  void audioContext.resume().catch(() => undefined);
+  return audioContext.resume().catch(() => undefined);
 }
 
-export async function playNotificationSound(
-  kind: "completion" | "input",
+export function playNotificationSound(kind: "completion" | "input", shouldPlay: () => boolean) {
+  return playSoundUrl(kind === "completion" ? completionUrl : inputUrl, shouldPlay);
+}
+
+/** Plays once audio is unlocked. Overlap lets rapid sounds such as keystrokes stack. */
+export async function playSoundUrl(
+  url: string,
   shouldPlay: () => boolean,
+  options: { readonly overlap?: boolean; readonly detune?: number } = {},
 ) {
   if (!audioContext || audioContext.state !== "running") return;
   const context = audioContext;
-  const url = kind === "completion" ? completionUrl : inputUrl;
   try {
     let buffer = buffers.get(url);
     if (!buffer) {
@@ -108,10 +113,11 @@ export async function playNotificationSound(
     }
     const decoded = await buffer;
     if (!shouldPlay() || context.state !== "running") return;
-    // Coalesce same-sound bursts after decode to avoid clipping; input and completion alerts keep separate slots.
-    if (context.currentTime < (playingUntil.get(url) ?? 0)) return;
+    // Coalesce same-sound bursts after decode to avoid clipping; each sound keeps its own slot.
+    if (!options.overlap && context.currentTime < (playingUntil.get(url) ?? 0)) return;
     const source = context.createBufferSource();
     source.buffer = decoded;
+    if (options.detune) source.detune.value = options.detune;
     source.connect(context.destination);
     source.start();
     playingUntil.set(url, context.currentTime + decoded.duration);

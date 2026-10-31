@@ -1,5 +1,6 @@
 import * as Notifications from "expo-notifications";
 
+import { isSoundThemeOn } from "../../lib/soundThemes";
 import { setAndroidThreadOnScreen } from "./androidNotifications";
 import { foregroundNotificationBehavior } from "./foregroundNotificationBehavior";
 import { routeAgentNotificationResponseOnce, threadDeepLinkOnScreen } from "./notificationPayload";
@@ -21,8 +22,11 @@ export function setAgentNotificationPathname(pathname: string): void {
 export function installAgentNotificationNavigation(navigate: (href: string) => void): () => void {
   const handledResponseIds = new Set<string>();
   Notifications.setNotificationHandler({
-    handleNotification: (notification) =>
-      Promise.resolve(foregroundNotificationBehavior(notification, deepLinkOnScreen)),
+    handleNotification: (notification) => {
+      const behavior = foregroundNotificationBehavior(notification, deepLinkOnScreen);
+      // An open app already plays the sound theme's own alert for this event.
+      return Promise.resolve(isSoundThemeOn() ? { ...behavior, shouldPlaySound: false } : behavior);
+    },
   });
 
   const handleResponse = (response: Notifications.NotificationResponse): void => {

@@ -1,4 +1,4 @@
-import { WORKING_EXIT_GRACE_MS } from "@t3tools/client-runtime/state/thread-inbox";
+import { WORKING_EXIT_GRACE_MS } from "./threadInbox.ts";
 
 export type ThreadNotificationKind = "input" | "completion";
 
@@ -56,6 +56,7 @@ export function createThreadNotificationGate<Key>(
       cancel(key);
       pending.set(key, {
         at,
+        // @effect-diagnostics-next-line globalTimers:off - Client callback gate, outside an Effect runtime.
         timer: setTimeout(() => {
           pending.delete(key);
           handled.set(key, at);

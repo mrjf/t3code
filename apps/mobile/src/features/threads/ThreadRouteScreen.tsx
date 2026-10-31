@@ -114,6 +114,7 @@ import {
 } from "./thread-inspector-preview";
 import type { ThreadInspectorTarget } from "./thread-inspector-navigation";
 import { useSelectWorkspaceDetail } from "../workspace/useSelectWorkspaceDetail";
+import { playThemeSound } from "../../lib/soundThemes";
 
 function InspectorPaneRoleActivation() {
   useAdaptiveWorkspacePaneRole("inspector");
@@ -672,6 +673,7 @@ function ThreadRouteContent(
     ) {
       return;
     }
+    playThemeSound("interrupt");
     return interruptThreadTurn({
       environmentId: selectedThread.environmentId,
       input: {

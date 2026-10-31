@@ -35,6 +35,7 @@ import {
   installAgentNotificationNavigation,
   setAgentNotificationPathname,
 } from "./features/agent-awareness/notificationNavigation";
+import { installSoundThemeAlerts } from "./features/threads/soundThemeAlerts";
 import {
   installAppShortcuts,
   recordAppShortcutNavigationState,
@@ -187,6 +188,7 @@ const appServiceDisposers = [
   installComposerAttachmentUploads(),
   startIncomingShareInbox(),
   installAgentNotificationNavigation(linkToAppPath),
+  installSoundThemeAlerts(),
   installAppShortcuts(linkToAppPath),
   installAppUpdateChecks(),
   installShowcaseCapture(rootPathnameFromState),

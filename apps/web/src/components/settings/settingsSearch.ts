@@ -326,6 +326,18 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["wide full width column layout messages composer monitor"],
   },
   {
+    id: "sound-theme",
+    title: "Sound theme",
+    to: "/settings/appearance",
+    searchTerms: ["sound audio pack crispy gooey send stop done alert chime notification"],
+  },
+  {
+    id: "typing-sounds",
+    title: "Typing sounds",
+    to: "/settings/appearance",
+    searchTerms: ["sound audio keyboard key click typing keystroke crispy gooey"],
+  },
+  {
     id: "thread-details-items",
     title: "Thread details",
     to: "/settings/appearance",

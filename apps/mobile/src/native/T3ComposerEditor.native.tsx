@@ -24,6 +24,7 @@ import {
   contextRecordFileName,
 } from "../lib/composerChipPresentation";
 import { contextChipIconUri } from "../lib/contextChipIconSource";
+import { playTypingSound } from "../lib/soundThemes";
 import { MOBILE_TYPOGRAPHY } from "../lib/typography";
 import { useNativePaste } from "../lib/useNativePaste";
 import { FONT_FAMILIES } from "../lib/fontFamilies";
@@ -327,6 +328,7 @@ export function ComposerEditor({
             event.nativeEvent.selection,
           );
           if (acknowledgedEventCount === false) return;
+          playTypingSound(props.value, event.nativeEvent.value);
           onChangeText(event.nativeEvent.value);
           onSelectionChange?.(event.nativeEvent.selection);
           setMostRecentEventCount(acknowledgedEventCount);
