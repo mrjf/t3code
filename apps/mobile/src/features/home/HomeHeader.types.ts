@@ -6,8 +6,17 @@ import type {
 
 export type HomeHeaderEnvironment = HomeListFilterMenuEnvironment;
 
+export interface HomeHeaderWorkspace {
+  readonly id: string;
+  readonly name: string;
+}
+
 export interface HomeHeaderProps {
   readonly environments: ReadonlyArray<HomeHeaderEnvironment>;
+  /** Named sets of projects; empty until the user creates one. */
+  readonly workspaces: ReadonlyArray<HomeHeaderWorkspace>;
+  readonly activeWorkspaceId: string | null;
+  readonly onWorkspaceChange: (workspaceId: string | null) => void;
   readonly projects: ReadonlyArray<HomeListFilterMenuProject>;
   readonly searchQuery: string;
   readonly selectedEnvironmentId: EnvironmentId | null;

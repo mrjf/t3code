@@ -3,11 +3,13 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   groupInWorkspace,
+  mergeWorkspaceCopies,
   mergeWorkspaces,
+  removeWorkspace,
   toggleWorkspaceGroup,
   workspaceMembersForGroup,
   workspaceProjectGroups,
-} from "./workspaces";
+} from "./workspaces.ts";
 
 const identity = (canonicalKey: string) => ({
   canonicalKey,
@@ -98,5 +100,17 @@ describe("mergeWorkspaces", () => {
         [newer, personal],
       ]).map((w) => w.name),
     ).toEqual(["Personal", "New name"]);
+  });
+
+  it("keeps a newer tombstone over an older live copy, and writes it back", () => {
+    const live = workspace({ updatedAt: "2026-10-02T00:00:00.000Z" });
+    const merged = mergeWorkspaceCopies(
+      [[live], [removeWorkspace([live], live.id, "2026-10-03T00:00:00.000Z")]].map((list) =>
+        list.flat(),
+      ),
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.deletedAt).toBe("2026-10-03T00:00:00.000Z");
+    expect(mergeWorkspaces([merged])).toEqual([]);
   });
 });

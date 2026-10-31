@@ -13,7 +13,7 @@ import { useSaveWorkspaces, useWorkspaces } from "../hooks/useWorkspaces";
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
 import { randomUUID } from "../lib/utils";
-import { groupInWorkspace, toggleWorkspaceGroup } from "../workspaces";
+import { groupInWorkspace, toggleWorkspaceGroup } from "@t3tools/client-runtime/state/workspaces";
 import { ProjectFavicon } from "./ProjectFavicon";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";

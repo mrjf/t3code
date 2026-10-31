@@ -1,21 +1,30 @@
 import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
+import {
+  liveWorkspaces,
+  mergeWorkspaceCopies,
+  removeWorkspace,
+  upsertWorkspace,
+  workspaceProjectGroups,
+} from "@t3tools/client-runtime/state/workspaces";
 import type { Workspace, WorkspaceWriteInput } from "@t3tools/contracts";
 
 import type { SidebarProjectSnapshot } from "~/sidebarProjectGrouping";
 import { useServerConfigs } from "~/state/entities";
 import { useUiStateStore } from "~/uiStateStore";
-import { mergeWorkspaces, workspaceProjectGroups } from "~/workspaces";
 import { useUpdatePrimarySettings } from "./useSettings";
 import { useSidebarProjectGroups } from "./useSidebarProjectGroups";
 
 const NO_WORKSPACES: readonly Workspace[] = [];
 
-/** Every connected environment's copy, merged by id with the newest copy winning. */
-export function useWorkspaces(): readonly Workspace[] {
+/** Every connected environment's copy, merged by id with the newest copy winning, tombstones kept. */
+function useMergedWorkspaceCopies(): readonly Workspace[] {
   const configs = useServerConfigs();
-  const copies = [...configs.values()].map((config) => config.settings.workspaces);
-  const merged = mergeWorkspaces(copies);
-  return merged.length === 0 ? NO_WORKSPACES : merged;
+  return mergeWorkspaceCopies([...configs.values()].map((config) => config.settings.workspaces));
+}
+
+export function useWorkspaces(): readonly Workspace[] {
+  const live = liveWorkspaces(useMergedWorkspaceCopies());
+  return live.length === 0 ? NO_WORKSPACES : live;
 }
 
 /** The workspace this device is switched to, or null for every project. */
@@ -58,30 +67,12 @@ export function useScopedProjectGroup(): {
  * which is how the same record ends up under the same id everywhere.
  */
 export function useSaveWorkspaces() {
-  const workspaces = useWorkspaces();
+  const merged = useMergedWorkspaceCopies();
   const updateSettings = useUpdatePrimarySettings();
-  const now = () => new Date().toISOString();
   const save = (next: readonly Workspace[]) => updateSettings({ workspaces: next });
   return {
-    upsert: (input: WorkspaceWriteInput) => {
-      const existing = workspaces.find((w) => w.id === input.id);
-      const record: Workspace = {
-        ...input,
-        createdAt: existing?.createdAt ?? now(),
-        updatedAt: now(),
-        deletedAt: null,
-      };
-      return save(
-        existing
-          ? workspaces.map((w) => (w.id === input.id ? record : w))
-          : [...workspaces, record],
-      );
-    },
-    remove: (id: Workspace["id"]) => {
-      const removed = workspaces.map((w) =>
-        w.id === id ? { ...w, updatedAt: now(), deletedAt: now() } : w,
-      );
-      return save(removed);
-    },
+    upsert: (input: WorkspaceWriteInput) =>
+      save(upsertWorkspace(merged, input, new Date().toISOString())),
+    remove: (id: Workspace["id"]) => save(removeWorkspace(merged, id, new Date().toISOString())),
   };
 }

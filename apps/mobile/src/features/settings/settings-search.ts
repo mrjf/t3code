@@ -32,6 +32,7 @@ const SETTINGS_SEARCH_TERMS = {
   SettingsMicrophone: ["voice", "dictation", "audio input", "bluetooth"],
   SettingsScheduledTasks: ["automations", "schedule", "cron", "recurring", "webhook"],
   SettingsProjectOverview: ["project", "overview", "checkouts", "delete project"],
+  SettingsWorkspaces: ["workspace", "workspaces", "personal", "work", "group projects", "theme"],
   SettingsOrganization: [
     "project grouping",
     "group projects",

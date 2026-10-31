@@ -232,7 +232,7 @@ import { SidebarWorkspaceRail } from "./sidebar/SidebarWorkspaceRail";
 import { openWorkspaceDialog } from "./WorkspaceDialog";
 import { useActiveWorkspace, useWorkspaces } from "../hooks/useWorkspaces";
 import { useSwitchToWorkspace } from "../hooks/useSwitchToProject";
-import { groupInWorkspace, workspaceProjectGroups } from "../workspaces";
+import { groupInWorkspace, workspaceProjectGroups } from "@t3tools/client-runtime/state/workspaces";
 import type { Workspace } from "@t3tools/contracts";
 import {
   projectThemeOptions,

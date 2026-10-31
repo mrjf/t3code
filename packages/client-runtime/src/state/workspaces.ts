@@ -1,6 +1,12 @@
-import { repositoryGroupingKeyOf, type Workspace, type WorkspaceMember } from "@t3tools/contracts";
+import {
+  repositoryGroupingKeyOf,
+  type Workspace,
+  type WorkspaceId,
+  type WorkspaceMember,
+  type WorkspaceWriteInput,
+} from "@t3tools/contracts";
 
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import type { EnvironmentProject } from "./models.ts";
 
 type MemberProject = Pick<EnvironmentProject, "id" | "repositoryIdentity">;
 /** The part of a project group that membership reads. */
@@ -22,6 +28,17 @@ export function groupInWorkspace(
 ): boolean {
   return workspace.members.some((member) =>
     group.memberProjects.some((project) => projectMatchesMember(project, member)),
+  );
+}
+
+/** Keeps the projects a workspace lists; null keeps them all. */
+export function filterProjectsToWorkspace<TProject extends MemberProject>(
+  projects: readonly TProject[],
+  workspace: Pick<Workspace, "members"> | null,
+): readonly TProject[] {
+  if (workspace === null) return projects;
+  return projects.filter((project) =>
+    workspace.members.some((member) => projectMatchesMember(project, member)),
   );
 }
 
@@ -60,20 +77,60 @@ export function toggleWorkspaceGroup(
 }
 
 /**
- * Every environment holds its own copy of a workspace; the newest copy wins and
- * is what the client shows and writes back to the rest.
+ * Every environment holds its own copy of a workspace; the newest copy of each id wins,
+ * tombstones included, so a delete made while another machine was offline still sticks.
+ * This is the list a client writes back to every environment.
  */
-export function mergeWorkspaces(copies: ReadonlyArray<readonly Workspace[]>): Workspace[] {
+export function mergeWorkspaceCopies(copies: ReadonlyArray<readonly Workspace[]>): Workspace[] {
   const byId = new Map<string, Workspace>();
   for (const list of copies) {
     for (const workspace of list) {
-      if (workspace.deletedAt !== null) continue;
       const current = byId.get(workspace.id);
       if (!current || workspace.updatedAt > current.updatedAt) byId.set(workspace.id, workspace);
     }
   }
-  return [...byId.values()].toSorted(
-    (left, right) =>
-      left.createdAt.localeCompare(right.createdAt) || left.name.localeCompare(right.name),
+  return [...byId.values()];
+}
+
+/** The workspaces to show: the merged copies minus tombstones, oldest first. */
+export function liveWorkspaces(merged: readonly Workspace[]): Workspace[] {
+  return merged
+    .filter((workspace) => workspace.deletedAt === null)
+    .sort(
+      (left, right) =>
+        left.createdAt.localeCompare(right.createdAt) || left.name.localeCompare(right.name),
+    );
+}
+
+export function mergeWorkspaces(copies: ReadonlyArray<readonly Workspace[]>): Workspace[] {
+  return liveWorkspaces(mergeWorkspaceCopies(copies));
+}
+
+/** The merged list with one record created or replaced. */
+export function upsertWorkspace(
+  merged: readonly Workspace[],
+  input: WorkspaceWriteInput,
+  now: string,
+): Workspace[] {
+  const existing = merged.find((workspace) => workspace.id === input.id);
+  const record: Workspace = {
+    ...input,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    deletedAt: null,
+  };
+  return existing
+    ? merged.map((workspace) => (workspace.id === input.id ? record : workspace))
+    : [...merged, record];
+}
+
+/** The merged list with one record tombstoned. */
+export function removeWorkspace(
+  merged: readonly Workspace[],
+  id: WorkspaceId,
+  now: string,
+): Workspace[] {
+  return merged.map((workspace) =>
+    workspace.id === id ? { ...workspace, updatedAt: now, deletedAt: now } : workspace,
   );
 }

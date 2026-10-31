@@ -86,9 +86,16 @@ import { SwipeableScrollGateProvider, useSwipeableScrollGate } from "./thread-sw
 import { useFabScroll } from "./FabScrollContext";
 import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
 import { ThreadListFilters } from "./ThreadListFilters";
+import type { HomeHeaderWorkspace } from "./HomeHeader.types";
 
 interface HomeScreenProps {
+  /** Already narrowed to the active workspace. */
   readonly projects: ReadonlyArray<EnvironmentProject>;
+  /** Lists only the projects' threads, not every thread, when no project is picked. */
+  readonly scopedToWorkspace: boolean;
+  readonly workspaces: ReadonlyArray<HomeHeaderWorkspace>;
+  readonly activeWorkspaceId: string | null;
+  readonly onWorkspaceChange: (workspaceId: string | null) => void;
   readonly threads: ReadonlyArray<EnvironmentThreadShell>;
   readonly pendingTasks: ReadonlyArray<PendingNewTask>;
   readonly catalogState: WorkspaceState;
@@ -382,12 +389,17 @@ export function HomeScreen(props: HomeScreenProps) {
     pickableProjectGroups(projectScopes),
     v2ProjectScopeKey,
   );
+  // Inside a workspace with no project picked, the list and search still stay in it.
+  const scopedProjectRefs =
+    v2ScopedProjectGroup !== null
+      ? v2ScopedProjectGroup.projectRefs
+      : props.scopedToWorkspace
+        ? projectScopes.flatMap((scope) => scope.projectRefs)
+        : null;
   const threadSearch = useThreadSearch(
     searchEnvironmentIds,
     props.searchQuery,
-    v2ScopedProjectGroup === null
-      ? {}
-      : { projectIds: v2ScopedProjectGroup.projectRefs.map((ref) => ref.projectId) },
+    scopedProjectRefs === null ? {} : { projectIds: scopedProjectRefs.map((ref) => ref.projectId) },
   );
   const threadSearchMatchByKey = useThreadListSearchMatches(props.threads, threadSearch);
   const v2ProjectTitleByProjectKey = new Map(
@@ -455,7 +467,7 @@ export function HomeScreen(props: HomeScreenProps) {
     threads: props.threads,
     pendingTasks: props.pendingTasks,
     environmentId: props.selectedEnvironmentId,
-    projectRefs: v2ScopedProjectGroup === null ? null : v2ScopedProjectGroup.projectRefs,
+    projectRefs: scopedProjectRefs,
     searchQuery: props.searchQuery,
     searchMatches: threadSearchMatchByKey,
     settlementEnvironmentIds,
@@ -716,6 +728,9 @@ export function HomeScreen(props: HomeScreenProps) {
         <ThreadListFilters
           gutter={primaryColumn ? 8 : 0}
           environments={props.environments}
+          workspaces={props.workspaces}
+          activeWorkspaceId={props.activeWorkspaceId}
+          onWorkspaceChange={props.onWorkspaceChange}
           projects={pickableProjectGroups(projectScopes).map((scope) => ({
             key: scope.key,
             label: scope.title,

@@ -24,6 +24,7 @@ import * as Arr from "effect/Array";
 import { pipe } from "effect/Function";
 
 import { useProjects, useServerConfigs, useThreadShells } from "../../state/entities";
+import { useWorkspaceProjects } from "../workspaces/useAppWorkspaces";
 import type { TurnCommandMetadata } from "../../lib/commandMetadata";
 import type { DraftComposerAttachment } from "../../lib/composerImages";
 import type { ModelOption, ProviderGroup } from "../../lib/modelOptions";
@@ -225,7 +226,7 @@ export function NewTaskFlowProvider(
     routeDraftId?: string;
   }>,
 ) {
-  const projects = useProjects();
+  const projects = useWorkspaceProjects(useProjects());
   const threads = useThreadShells();
   const { savedConnectionsById } = useSavedRemoteConnections();
   const groupingSettings = useMobileProjectGroupingSettings();

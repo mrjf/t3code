@@ -21,6 +21,10 @@ palette, switches to its project, and leaves the workspace if the project is out
 Workspaces are saved on every connected environment, so each machine lists the same ones. A
 project belongs to a workspace on every machine that has a checkout of its repository.
 
+On mobile, the thread list's filter chips (iOS) or its filter menu (Android) switch workspaces,
+and **Settings → Workspaces** creates and edits them. The desktop app's File menu has
+**New Workspace…** too. On a phone a workspace's theme and colors apply; its fonts do not.
+
 A workspace's theme, colors and fonts apply while it is active. A project whose `t3.json`
 declares an `appearance` paints over them while it is open; choose **My theme** for that
 project to keep yours. See [Project settings](./project-settings.md#project-appearance).

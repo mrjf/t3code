@@ -27,7 +27,8 @@ import {
 } from "../../../lib/materialYouPalette";
 import { materialYouPaletteToMobileThemeVariables } from "../../../lib/materialYouTheme";
 import { getMobileThemeRuntimeVariables } from "../../../lib/mobileThemeVariables";
-import type { MobileThemeVariables } from "../../../lib/mobileTheme";
+import { isMobileThemeId, type MobileThemeVariables } from "../../../lib/mobileTheme";
+import { useActiveAppWorkspace } from "../../workspaces/useAppWorkspaces";
 import {
   createMobileThemePairPatch,
   createMobileThemeSelectionPatch,
@@ -104,6 +105,36 @@ const systemColorPalettesAtom = Atom.make((get): MaterialYouPalettes | null => {
   });
   return initial;
 }).pipe(Atom.withLabel("mobile:system-color-palettes"));
+
+/** A workspace without a theme tints the user's theme: its background and accent. */
+function applyWorkspaceTint(
+  variables: MobileThemeVariables,
+  tint: { readonly background: string; readonly accent: string } | null,
+): MobileThemeVariables {
+  if (tint === null) return variables;
+  const { background, accent } = tint;
+  return {
+    ...variables,
+    "--color-screen": background,
+    "--color-thread-canvas": background,
+    "--color-header": background,
+    "--color-drawer": background,
+    "--color-status-bar": background,
+    "--color-primary": accent,
+    "--color-primary-text": accent,
+    "--color-focus": accent,
+    "--color-switch-active-track": accent,
+    "--color-md-link": accent,
+    "--color-primary-foreground": readableOn(accent),
+  };
+}
+
+function readableOn(hex: string): string {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((index) =>
+    Number.parseInt(hex.slice(index, index + 2), 16),
+  );
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#111111" : "#ffffff";
+}
 
 function resolveThemeVariablesByAppearance(
   themeIds: MobileThemeIds,
@@ -204,9 +235,15 @@ export function AppearancePreferencesProvider(props: { readonly children: ReactN
   const themeMode = normalizeMobileThemeMode(storedPreferences?.themeMode);
   const themeAppearance = themeMode === "system" ? systemColorScheme : themeMode;
   const resolvedThemeIds = resolveMobileThemeIds(storedPreferences ?? {});
+  // The active workspace's theme paints in place of the user's; its tint sits on top.
+  const workspaceAppearance = useActiveAppWorkspace()?.appearance ?? null;
+  const workspaceThemeId = workspaceAppearance?.theme;
   const themeIds = useMemo<MobileThemeIds>(
-    () => ({ light: resolvedThemeIds.light, dark: resolvedThemeIds.dark }),
-    [resolvedThemeIds.dark, resolvedThemeIds.light],
+    () =>
+      isMobileThemeId(workspaceThemeId)
+        ? { light: workspaceThemeId, dark: workspaceThemeId }
+        : { light: resolvedThemeIds.light, dark: resolvedThemeIds.dark },
+    [resolvedThemeIds.dark, resolvedThemeIds.light, workspaceThemeId],
   );
   const themeId = themeIds[themeAppearance];
   const systemColorsActive = themeId === "material-you" && isSystemColorsAvailable;
@@ -215,7 +252,10 @@ export function AppearancePreferencesProvider(props: { readonly children: ReactN
     themeIds,
     systemColorPalettes,
   );
-  const themeVariables = themeVariablesByAppearance[themeAppearance];
+  const themeVariables = applyWorkspaceTint(
+    themeVariablesByAppearance[themeAppearance],
+    workspaceThemeId ? null : (workspaceAppearance?.[themeAppearance] ?? null),
+  );
   const activeThemeName = getMobileUniwindThemeName(themeId, themeAppearance);
   const { baseFontSize, codeFontSize, codeWordBreak, terminalFontSize } = preferences;
   const appearance = useMemo(

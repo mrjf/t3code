@@ -7,6 +7,9 @@ export function ThreadListFilters(
   props: Pick<
     HomeHeaderProps,
     | "environments"
+    | "workspaces"
+    | "activeWorkspaceId"
+    | "onWorkspaceChange"
     | "projects"
     | "selectedEnvironmentId"
     | "selectedProjectKey"
@@ -23,6 +26,9 @@ export function ThreadListFilters(
   const selectedProject = props.projects.find(
     (project) => project.key === props.selectedProjectKey,
   );
+  const activeWorkspace = props.workspaces.find(
+    (workspace) => workspace.id === props.activeWorkspaceId,
+  );
   return (
     <ScrollView
       horizontal
@@ -30,6 +36,34 @@ export function ThreadListFilters(
       style={{ marginHorizontal: -props.gutter }}
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 2, paddingBottom: 10, gap: 8 }}
     >
+      {props.workspaces.length > 0 ? (
+        <ListFilterMenu
+          label={activeWorkspace?.name ?? "All workspaces"}
+          accessibilityLabel="Switch workspace"
+          active={activeWorkspace !== undefined}
+          actions={[
+            {
+              id: "all",
+              title: "All projects",
+              state: props.activeWorkspaceId === null ? "on" : "off",
+            },
+            ...props.workspaces.map((workspace) => ({
+              id: JSON.stringify(workspace.id),
+              title: workspace.name,
+              state: workspace.id === props.activeWorkspaceId ? ("on" as const) : ("off" as const),
+            })),
+          ]}
+          onSelect={(id) => {
+            if (id === "all") props.onWorkspaceChange(null);
+            else {
+              const workspace = props.workspaces.find(
+                (candidate) => JSON.stringify(candidate.id) === id,
+              );
+              if (workspace) props.onWorkspaceChange(workspace.id);
+            }
+          }}
+        />
+      ) : null}
       <ListFilterMenu
         label={selectedEnvironment?.label ?? "All environments"}
         accessibilityLabel="Filter threads by environment"
@@ -60,13 +94,16 @@ export function ThreadListFilters(
         }}
       />
       <ListFilterMenu
-        label={selectedProject?.label ?? "All projects"}
+        label={
+          selectedProject?.label ??
+          (activeWorkspace ? `All in ${activeWorkspace.name}` : "All projects")
+        }
         accessibilityLabel="Filter threads by project"
         active={selectedProject !== undefined}
         actions={[
           {
             id: "all",
-            title: "All projects",
+            title: activeWorkspace ? `All in ${activeWorkspace.name}` : "All projects",
             state: props.selectedProjectKey === null ? "on" : "off",
           },
           ...props.projects.map((project) => ({

@@ -38,6 +38,12 @@ import { useWorkspaceTabs } from "../workspace/WorkspaceTabsContext";
 import { openSettings } from "../settings/settings-navigation";
 import { useSelectWorkspaceTab } from "../workspace/useSelectWorkspaceTab";
 import { useSelectWorkspaceDetail } from "../workspace/useSelectWorkspaceDetail";
+import {
+  useActiveAppWorkspace,
+  useAppWorkspaces,
+  useSetActiveAppWorkspace,
+} from "../workspaces/useAppWorkspaces";
+import { filterProjectsToWorkspace } from "@t3tools/client-runtime/state/workspaces";
 
 export function HomeRouteScreen() {
   const { width: windowWidth } = useWindowDimensions();
@@ -48,7 +54,15 @@ export function HomeRouteScreen() {
   const { layout, panes, primarySidebarSearchQuery, setPrimarySidebarSearchQuery, startNewTask } =
     useAdaptiveWorkspaceLayout();
   const selectDetail = useSelectWorkspaceDetail();
-  const projects = useProjects();
+  // The workspace this device is switched to narrows every project list below.
+  const workspaces = useAppWorkspaces();
+  const activeWorkspace = useActiveAppWorkspace();
+  const setActiveWorkspace = useSetActiveAppWorkspace();
+  const projects = filterProjectsToWorkspace(useProjects(), activeWorkspace);
+  const changeWorkspace = (workspaceId: string | null) => {
+    setActiveWorkspace(workspaces.find((workspace) => workspace.id === workspaceId) ?? null);
+    setSelectedProjectKey(null);
+  };
   // Stop rebuilding the streaming thread list while Thread covers Home.
   const visible = useHomeRouteVisible();
   const threads = useAtomValueWhileVisible(
@@ -222,6 +236,9 @@ export function HomeRouteScreen() {
         )}
         <HomeHeader
           environments={environments}
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspace?.id ?? null}
+          onWorkspaceChange={changeWorkspace}
           projects={projectFilterOptions}
           searchQuery={searchQuery}
           selectedEnvironmentId={selectedEnvironmentId}
@@ -272,6 +289,10 @@ export function HomeRouteScreen() {
           pendingTasks={pendingTasks}
           projectGroupingMode={listOptions.projectGroupingMode}
           projects={projects}
+          scopedToWorkspace={activeWorkspace !== null}
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspace?.id ?? null}
+          onWorkspaceChange={changeWorkspace}
           projectSortOrder={listOptions.projectSortOrder}
           savedConnectionsById={savedConnectionsById}
           searchQuery={searchQuery}

@@ -128,6 +128,8 @@ export interface Preferences {
   readonly threadListFilters?: ThreadListFilters;
   readonly pullRequestListFilters?: PullRequestListPreferences;
   readonly workspaceSelections?: WorkspaceSelections;
+  /** The workspace (a named set of projects) this device is switched to; null shows every project. */
+  readonly activeWorkspaceId?: string | null;
 }
 
 export class MobilePreferencesLoadError extends Schema.TaggedError<MobilePreferencesLoadError>()(
@@ -205,6 +207,7 @@ function sanitizePreferences(parsed: Preferences): Preferences {
     threadListFilters?: ThreadListFilters;
     pullRequestListFilters?: PullRequestListPreferences;
     workspaceSelections?: WorkspaceSelections;
+    activeWorkspaceId?: string | null;
   } = {};
 
   if (Array.isArray(parsed.hiddenNavigationTabs)) {
@@ -358,6 +361,9 @@ function sanitizePreferences(parsed: Preferences): Preferences {
   }
   if (isWorkspaceSelections(parsed.workspaceSelections)) {
     preferences.workspaceSelections = parsed.workspaceSelections;
+  }
+  if (typeof parsed.activeWorkspaceId === "string" || parsed.activeWorkspaceId === null) {
+    preferences.activeWorkspaceId = parsed.activeWorkspaceId;
   }
   return preferences;
 }

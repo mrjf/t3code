@@ -13,6 +13,26 @@ export function HomeHeader(props: HomeHeaderProps) {
   const hasCustomListOptions =
     props.selectedEnvironmentId !== null || props.selectedProjectKey !== null;
   const menuActions: MenuAction[] = [
+    ...(props.workspaces.length === 0
+      ? []
+      : ([
+          {
+            id: "workspace",
+            title: "Workspace",
+            subactions: [
+              {
+                id: "workspace:all",
+                title: "All projects",
+                state: checkedMenuState(props.activeWorkspaceId === null),
+              },
+              ...props.workspaces.map((workspace) => ({
+                id: `workspace:${workspace.id}`,
+                title: workspace.name,
+                state: checkedMenuState(props.activeWorkspaceId === workspace.id),
+              })),
+            ],
+          },
+        ] satisfies MenuAction[])),
     {
       id: "environment",
       title: "Environment",
@@ -52,6 +72,17 @@ export function HomeHeader(props: HomeHeaderProps) {
   ];
   const handleMenuAction = (event: { nativeEvent: { event: string } }) => {
     const id = event.nativeEvent.event;
+    if (id === "workspace:all") {
+      props.onWorkspaceChange(null);
+      return;
+    }
+    if (id.startsWith("workspace:")) {
+      const workspaceId = id.slice("workspace:".length);
+      if (props.workspaces.some((workspace) => workspace.id === workspaceId)) {
+        props.onWorkspaceChange(workspaceId);
+      }
+      return;
+    }
     if (id === "environment:all") {
       props.onEnvironmentChange(null);
       return;

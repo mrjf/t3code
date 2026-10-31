@@ -65,7 +65,7 @@ import { appAtomRegistry } from "../rpc/atomRegistry";
 import { registerCommands, registerMenuAction } from "../shortcuts/dispatcher";
 import { resolveThreadRouteRef } from "../threadRoutes";
 import { ProjectLookProvider, useActiveProjectLook } from "./ProjectLookProvider";
-import { WorkspaceDialogHost } from "./WorkspaceDialog";
+import { openWorkspaceDialog, WorkspaceDialogHost } from "./WorkspaceDialog";
 
 const MACOS_TRAFFIC_LIGHTS_LEFT_INSET = "var(--desktop-window-controls-inset, 90px)";
 
@@ -304,6 +304,7 @@ function registerAppShellCommands(router: AnyRouter, shellElement: Element): () 
     registerNavigationHistoryCommands(router),
     registerWorkspaceFocusCommands(router),
     registerPullRequestsEscapeCommand(router),
+    registerMenuAction("new-workspace", () => openWorkspaceDialog(null)),
     registerMenuAction("open-settings", () => {
       if (!/^\/settings(\/|$)/.test(router.state.location.pathname))
         void router.navigate({ to: "/settings" });

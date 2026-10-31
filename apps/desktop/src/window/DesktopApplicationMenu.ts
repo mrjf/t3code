@@ -190,6 +190,11 @@ export const make = Effect.gen(function* () {
       {
         label: "File",
         submenu: [
+          {
+            label: "New Workspace...",
+            click: () => runMenuEffect("new-workspace", dispatchMenuAction("new-workspace")),
+          },
+          { type: "separator" as const },
           ...(environment.platform === "darwin"
             ? []
             : [

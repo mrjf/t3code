@@ -9,7 +9,7 @@ import { environmentThreadShells } from "~/state/threads";
 import { useThreadSelectionStore } from "~/threadSelectionStore";
 import { buildThreadRouteParams } from "~/threadRoutes";
 import { useUiStateStore } from "~/uiStateStore";
-import { workspaceProjectGroups } from "~/workspaces";
+import { workspaceProjectGroups } from "@t3tools/client-runtime/state/workspaces";
 import { useHandleNewThread } from "./useHandleNewThread";
 import { useSidebarProjectGroups } from "./useSidebarProjectGroups";
 import { useStableCallback } from "./useStableCallback";

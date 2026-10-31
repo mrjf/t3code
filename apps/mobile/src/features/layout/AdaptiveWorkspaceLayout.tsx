@@ -50,6 +50,7 @@ import { scopedThreadKey } from "../../lib/scopedEntities";
 import type { ThreadListFilters } from "../../persistence/mobile-preferences";
 import { appAtomRegistry } from "../../state/atom-registry";
 import { useProjects } from "../../state/entities";
+import { useWorkspaceProjects } from "../workspaces/useAppWorkspaces";
 import { useThreadCwd } from "../../state/use-selected-thread-worktree";
 import { environmentThreadShells } from "../../state/threads";
 import { mobilePreferencesAtom } from "../../state/preferences";
@@ -591,7 +592,8 @@ function AdaptiveWorkspaceLayoutContent(
   const handleSelectThreadRoute = (params: ReactNavigation.RootParamList["Thread"]) =>
     handleSelectDetail({ name: "Thread", params });
 
-  const projects = useProjects();
+  // New threads start inside the workspace this device is switched to.
+  const projects = useWorkspaceProjects(useProjects());
   const compactAndroidSettings =
     Platform.OS === "android" && androidSettingsOpen && !layout.usesSplitView;
   // Reads the open page when pressed, so the layout context doesn't change on every navigation.
