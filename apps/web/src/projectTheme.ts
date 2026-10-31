@@ -1,12 +1,15 @@
-import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import type { ProjectIconColor } from "@t3tools/contracts";
+import { useAtomValue } from "@effect/atom-react";
+import type { ProjectReadFileResult, ScopedProjectRef } from "@t3tools/contracts";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
+import * as Option from "effect/Option";
+import { AsyncResult, Atom } from "effect/reactivity";
 import * as Schema from "effect/Schema";
 
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { refreshTheme } from "./hooks/useTheme";
+import { projectEnvironment } from "./state/projects";
 import {
   applyThemeColorPreview,
-  createVividThemeColors,
   getCustomThemes,
   getThemeColorsForMode,
   getThemeDefinition,
@@ -17,38 +20,38 @@ import {
 const PROJECT_THEMES_STORAGE_KEY = "t3code:project-themes:v1";
 const ProjectThemeChoices = Schema.Record(Schema.String, Schema.String);
 
-/** "project" derives a palette from the project's icon color; "none" keeps the user's theme. */
+/** "project" uses the look the repository declares in t3.json; "none" keeps the user's theme. */
 export type ProjectThemeChoice = "project" | "none" | (string & {});
 
-// Tailwind 600 (accent) and 50/950 (canvas) for each project icon color.
-const PROJECT_COLOR_SEEDS: Record<
-  Exclude<ProjectIconColor, "gray">,
-  { accent: string; light: string; dark: string }
-> = {
-  red: { accent: "#dc2626", light: "#fef2f2", dark: "#1f0a0a" },
-  orange: { accent: "#ea580c", light: "#fff7ed", dark: "#1f0e05" },
-  amber: { accent: "#d97706", light: "#fffbeb", dark: "#1c1305" },
-  yellow: { accent: "#ca8a04", light: "#fefce8", dark: "#1a1505" },
-  lime: { accent: "#65a30d", light: "#f7fee7", dark: "#111a05" },
-  green: { accent: "#16a34a", light: "#f0fdf4", dark: "#06180d" },
-  emerald: { accent: "#059669", light: "#ecfdf5", dark: "#04180f" },
-  teal: { accent: "#0d9488", light: "#f0fdfa", dark: "#041817" },
-  cyan: { accent: "#0891b2", light: "#ecfeff", dark: "#04161c" },
-  sky: { accent: "#0284c7", light: "#f0f9ff", dark: "#05131f" },
-  blue: { accent: "#2563eb", light: "#eff6ff", dark: "#070f24" },
-  indigo: { accent: "#4f46e5", light: "#eef2ff", dark: "#0c0b26" },
-  violet: { accent: "#7c3aed", light: "#f5f3ff", dark: "#140a26" },
-  purple: { accent: "#9333ea", light: "#faf5ff", dark: "#170a24" },
-  fuchsia: { accent: "#c026d3", light: "#fdf4ff", dark: "#1d0820" },
-  pink: { accent: "#db2777", light: "#fdf2f8", dark: "#1f0814" },
-  rose: { accent: "#e11d48", light: "#fff1f2", dark: "#1f0710" },
-};
+const HexColor = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/));
+const AppearanceColors = Schema.Struct({ background: HexColor, accent: HexColor });
+const ProjectAppearance = Schema.Struct({
+  font: Schema.optional(Schema.String),
+  light: Schema.optional(AppearanceColors),
+  dark: Schema.optional(AppearanceColors),
+});
+type ProjectAppearance = typeof ProjectAppearance.Type;
+const decodeProjectFile = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ appearance: Schema.optional(ProjectAppearance) })),
+);
 
-type ProjectThemeSource = Pick<EnvironmentProject, "projectIcon"> & { readonly projectKey: string };
+const NO_PROJECT_FILE = Atom.make(AsyncResult.initial<ProjectReadFileResult, never>(false));
 
-function projectIconColor(project: ProjectThemeSource): ProjectIconColor | null {
-  const icon = project.projectIcon;
-  return icon && "color" in icon ? icon.color : null;
+/** The `appearance` block of the project's t3.json, if it has one. */
+export function useProjectAppearance(
+  project: (ScopedProjectRef & { readonly workspaceRoot: string }) | null,
+): ProjectAppearance | null {
+  const result = useAtomValue(
+    project
+      ? projectEnvironment.readFile({
+          environmentId: project.environmentId,
+          input: { cwd: project.workspaceRoot, relativePath: "t3.json", allowMissing: true },
+        })
+      : NO_PROJECT_FILE,
+  );
+  const file = Option.getOrUndefined(AsyncResult.value(result));
+  if (!project || !file || file.exists === false) return null;
+  return Option.getOrUndefined(decodeProjectFile(file.contents))?.appearance ?? null;
 }
 
 const NO_PROJECT_THEME_CHOICES: Readonly<Record<string, ProjectThemeChoice>> = {};
@@ -64,19 +67,14 @@ export function useProjectThemeChoices() {
   return [choices, setChoice] as const;
 }
 
-export function canUseProjectColors(project: ProjectThemeSource): boolean {
-  const color = projectIconColor(project);
-  return color !== null && color !== "gray";
-}
-
-/** A colored project icon themes its project by default. */
 export function resolveProjectThemeChoice(
-  project: ProjectThemeSource,
+  projectKey: string,
+  hasProjectLook: boolean,
   choices: Readonly<Record<string, ProjectThemeChoice>>,
 ): ProjectThemeChoice {
-  const choice = choices[project.projectKey];
-  if (choice === "project" && !canUseProjectColors(project)) return "none";
-  return choice ?? (canUseProjectColors(project) ? "project" : "none");
+  const choice = choices[projectKey];
+  if (choice === "project" && !hasProjectLook) return "none";
+  return choice ?? (hasProjectLook ? "project" : "none");
 }
 
 export function projectThemeOptions(): ReadonlyArray<{ id: string; label: string }> {
@@ -86,30 +84,69 @@ export function projectThemeOptions(): ReadonlyArray<{ id: string; label: string
   }));
 }
 
-export function resolveProjectThemeColors(
-  project: ProjectThemeSource,
-  choice: ProjectThemeChoice,
-  appearance: ThemeAppearance,
-): { colors: ThemeColors; appearance: ThemeAppearance } | null {
-  if (choice === "none") return null;
-  if (choice === "project") {
-    const color = projectIconColor(project);
-    if (color === null || color === "gray") return null;
-    const seed = PROJECT_COLOR_SEEDS[color];
-    return {
-      colors: createVividThemeColors(appearance, seed[appearance], seed.accent),
-      appearance,
-    };
-  }
-  const theme = getThemeDefinition(choice);
-  if (!theme) return null;
-  const colors = getThemeColorsForMode(theme, appearance);
-  return colors ? { colors, appearance } : { colors: theme.colors, appearance: theme.appearance };
+function readableOn(hex: string): string {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((index) =>
+    Number.parseInt(hex.slice(index, index + 2), 16),
+  );
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#111111" : "#ffffff";
 }
 
-export function applyProjectTheme(theme: {
-  colors: ThemeColors;
+export type ProjectLook =
+  | { readonly kind: "palette"; readonly colors: ThemeColors; readonly appearance: ThemeAppearance }
+  | { readonly kind: "tint"; readonly variables: Readonly<Record<string, string>> };
+
+/** A chosen theme replaces the palette; the project's own look tints the user's theme. */
+export function resolveProjectLook(input: {
+  choice: ProjectThemeChoice;
+  projectAppearance: ProjectAppearance | null;
   appearance: ThemeAppearance;
-}): void {
-  applyThemeColorPreview(theme.colors, theme.appearance);
+}): ProjectLook | null {
+  const { choice, projectAppearance, appearance } = input;
+  if (choice === "none") return null;
+  if (choice !== "project") {
+    const theme = getThemeDefinition(choice);
+    if (!theme) return null;
+    const colors = getThemeColorsForMode(theme, appearance);
+    return colors
+      ? { kind: "palette", colors, appearance }
+      : { kind: "palette", colors: theme.colors, appearance: theme.appearance };
+  }
+  if (!projectAppearance) return null;
+  const brand = projectAppearance[appearance];
+  const variables: Record<string, string> = {};
+  if (brand) {
+    for (const name of [
+      "--background",
+      "--app-chrome-background",
+      "--toolbar-background",
+      "--sidebar",
+    ]) {
+      variables[name] = brand.background;
+    }
+    variables["--primary"] = brand.accent;
+    variables["--primary-foreground"] = readableOn(brand.accent);
+    variables["--ring"] = brand.accent;
+  }
+  if (projectAppearance.font) variables["--font-sans"] = projectAppearance.font;
+  return { kind: "tint", variables };
+}
+
+/** Paints the look onto the document root and returns how to undo it. */
+export function applyProjectLook(look: ProjectLook): () => void {
+  if (look.kind === "palette") {
+    applyThemeColorPreview(look.colors, look.appearance);
+    return () => refreshTheme();
+  }
+  // Inline styles outrank the stylesheet's theme selectors without touching the user's theme.
+  const style = document.documentElement.style;
+  const previous = Object.keys(look.variables).map(
+    (name) => [name, style.getPropertyValue(name)] as const,
+  );
+  for (const [name, value] of Object.entries(look.variables)) style.setProperty(name, value);
+  return () => {
+    for (const [name, value] of previous) {
+      if (value) style.setProperty(name, value);
+      else style.removeProperty(name);
+    }
+  };
 }

@@ -116,6 +116,7 @@ import {
   useThreadActions,
 } from "../hooks/useThreadActions";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
+import { useSwitchToProject } from "../hooks/useSwitchToProject";
 import { useProjectPin } from "../hooks/useProjectGroupUpdate";
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { useTerminalFocus } from "../hooks/useTerminalFocus";
@@ -228,13 +229,13 @@ import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { SidebarProjectRail } from "./sidebar/SidebarProjectRail";
-import { refreshTheme, useTheme } from "../hooks/useTheme";
+import { useTheme } from "../hooks/useTheme";
 import {
-  applyProjectTheme,
-  canUseProjectColors,
+  applyProjectLook,
   projectThemeOptions,
+  resolveProjectLook,
   resolveProjectThemeChoice,
-  resolveProjectThemeColors,
+  useProjectAppearance,
   useProjectThemeChoices,
 } from "../projectTheme";
 import { TooltipProvider } from "./ui/tooltip";
@@ -1130,24 +1131,37 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       ? new Set(revealGroup.memberProjectRefs.map((ref) => `${ref.environmentId}:${ref.projectId}`))
       : null
     : chosenScopeProjectKeys;
+  const switchToProject = useSwitchToProject();
   const [projectThemeChoices, setProjectThemeChoice] = useProjectThemeChoices();
   const { resolvedTheme: userAppearance } = useTheme();
   const themedProject = scopedProjectGroups.length === 1 ? scopedProjectGroups[0]! : null;
-  const projectTheme = themedProject
-    ? resolveProjectThemeColors(
-        themedProject,
-        resolveProjectThemeChoice(themedProject, projectThemeChoices),
-        userAppearance,
-      )
+  const projectAppearance = useProjectAppearance(
+    themedProject
+      ? {
+          environmentId: themedProject.environmentId,
+          projectId: themedProject.id,
+          workspaceRoot: themedProject.workspaceRoot,
+        }
+      : null,
+  );
+  const projectLook = themedProject
+    ? resolveProjectLook({
+        choice: resolveProjectThemeChoice(
+          themedProject.projectKey,
+          projectAppearance !== null,
+          projectThemeChoices,
+        ),
+        projectAppearance,
+        appearance: userAppearance,
+      })
     : null;
   // A string key keeps the effect from repainting on every render.
-  const projectThemeKey = projectTheme ? JSON.stringify(projectTheme) : null;
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- paints the chosen project's theme onto the document root and restores the user's theme after
+  const projectLookKey = projectLook ? JSON.stringify(projectLook) : null;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- paints the chosen project's look onto the document root and restores the user's theme after
   useEffect(() => {
-    if (projectThemeKey === null) return;
-    applyProjectTheme(JSON.parse(projectThemeKey));
-    return () => refreshTheme();
-  }, [projectThemeKey]);
+    if (projectLookKey === null) return;
+    return applyProjectLook(JSON.parse(projectLookKey));
+  }, [projectLookKey]);
   const threadSearch = useThreadSearch(
     connectedEnvironmentIds,
     threadSearchQuery,
@@ -1203,7 +1217,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     (group: SidebarProjectSnapshot, position: { x: number; y: number }) => {
       const api = readLocalApi();
       if (!api) return;
-      const themeChoice = resolveProjectThemeChoice(group, projectThemeChoices);
+      const themeChoice = resolveProjectThemeChoice(group.projectKey, true, projectThemeChoices);
       void (async () => {
         const clicked = await settlePromise(() =>
           api.contextMenu.show(
@@ -1221,15 +1235,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 id: "theme",
                 label: "Theme",
                 children: [
-                  ...(canUseProjectColors(group)
-                    ? [
-                        {
-                          id: "theme:project",
-                          label: "Project colors",
-                          checked: themeChoice === "project",
-                        },
-                      ]
-                    : []),
+                  {
+                    id: "theme:project",
+                    label: "Project's look",
+                    checked: themeChoice === "project",
+                  },
                   { id: "theme:none", label: "My theme", checked: themeChoice === "none" },
                   ...projectThemeOptions().map((theme, index) => ({
                     id: `theme:${theme.id}`,
@@ -2953,7 +2963,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           <SidebarProjectRail
             projects={scopeGroups}
             selectedKeys={projectScopeKeys}
-            onSelect={(key) => setProjectScopeKeys(key === null ? [] : [key])}
+            onSelect={(key) => {
+              clearSelection();
+              switchToProject(scopeGroups.find((group) => group.projectKey === key) ?? null);
+            }}
             onToggle={toggleProjectScopeKey}
             onProjectContextMenu={handleProjectFolderContextMenu}
             onAddProject={openAddProjectCommandPalette}

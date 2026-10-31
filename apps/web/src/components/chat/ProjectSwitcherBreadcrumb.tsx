@@ -1,13 +1,9 @@
-import { scopeProjectRef, scopeThreadRef } from "@t3tools/client-runtime/environment";
 import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
-import { useRouter } from "@tanstack/react-router";
 import { CheckIcon, ChevronDownIcon, LayersIcon, SquarePenIcon } from "lucide-react";
 
-import { useHandleNewThread } from "~/hooks/useHandleNewThread";
 import { useSidebarProjectGroups } from "~/hooks/useSidebarProjectGroups";
-import { useQuietThreadShells } from "~/state/entities";
-import { buildThreadRouteParams } from "~/threadRoutes";
+import { useSwitchToProject } from "~/hooks/useSwitchToProject";
 import { useUiStateStore } from "~/uiStateStore";
 import { ProjectFavicon } from "../ProjectFavicon";
 import { WorkspaceBreadcrumbText } from "../WorkspaceBreadcrumb";
@@ -19,36 +15,9 @@ export function ProjectSwitcherBreadcrumb(props: {
   activeProjectName: string | undefined;
   onNewThreadInProject: () => void;
 }) {
-  const router = useRouter();
   const projectGroups = pickableProjectGroups(useSidebarProjectGroups());
-  const threads = useQuietThreadShells();
-  const { handleNewThread } = useHandleNewThread();
   const scopeKeys = useUiStateStore((store) => store.sidebarProjectScopeKeys);
-  const setScopeKeys = useUiStateStore((store) => store.setSidebarProjectScopeKeys);
-
-  const switchToProject = (group: (typeof projectGroups)[number]) => {
-    setScopeKeys([group.projectKey]);
-    const members = new Set(
-      group.memberProjectRefs.map((ref) => `${ref.environmentId}:${ref.projectId}`),
-    );
-    const latest = threads
-      .filter(
-        (thread) =>
-          thread.archivedAt === null && members.has(`${thread.environmentId}:${thread.projectId}`),
-      )
-      .reduce<(typeof threads)[number] | null>(
-        (best, thread) => (best === null || thread.updatedAt > best.updatedAt ? thread : best),
-        null,
-      );
-    if (latest) {
-      void router.navigate({
-        to: "/$environmentId/$threadId",
-        params: buildThreadRouteParams(scopeThreadRef(latest.environmentId, latest.id)),
-      });
-    } else {
-      void handleNewThread(scopeProjectRef(group.environmentId, group.id));
-    }
-  };
+  const switchToProject = useSwitchToProject();
 
   return (
     <Menu>
@@ -73,7 +42,7 @@ export function ProjectSwitcherBreadcrumb(props: {
           New thread in {props.activeProjectName}
         </MenuItem>
         <MenuSeparator />
-        <MenuItem onClick={() => setScopeKeys([])}>
+        <MenuItem onClick={() => switchToProject(null)}>
           <LayersIcon className="size-4" />
           <span className="flex-1">All projects</span>
           {scopeKeys.length === 0 ? <CheckIcon className="size-3.5" /> : null}
