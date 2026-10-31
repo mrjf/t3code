@@ -71,11 +71,13 @@ export type T3ProjectFileScript = typeof T3ProjectFileScript.Type;
 
 const T3_PROJECT_FILE_FONT_MAX_LENGTH = 200;
 
-const ProjectAppearanceColor = Schema.String.check(Schema.isPattern(/^#[0-9a-fA-F]{6}$/)).annotate({
+export const ProjectAppearanceColor = Schema.String.check(
+  Schema.isPattern(/^#[0-9a-fA-F]{6}$/),
+).annotate({
   description: 'A six-digit hex color, such as "#f6f7fb".',
 });
 
-const ProjectAppearanceColors = Schema.Struct({
+export const ProjectAppearanceColors = Schema.Struct({
   background: ProjectAppearanceColor.annotate({
     description: "Background tint for the canvas, toolbar and sidebar.",
   }),
@@ -94,7 +96,7 @@ const repositoryFilePath = (extension: string) =>
   );
 const ProjectArtworkPath = repositoryFilePath("svg");
 
-const projectFont = (description: string) =>
+export const projectFont = (description: string) =>
   Schema.optionalKey(trimmedNonEmpty({ description }, T3_PROJECT_FILE_FONT_MAX_LENGTH));
 
 export const T3ProjectFileAppearance = Schema.Struct({

@@ -116,7 +116,6 @@ import {
   useThreadActions,
 } from "../hooks/useThreadActions";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { useSwitchToProject } from "../hooks/useSwitchToProject";
 import { useProjectPin } from "../hooks/useProjectGroupUpdate";
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { useTerminalFocus } from "../hooks/useTerminalFocus";
@@ -229,7 +228,12 @@ import { threadChipCopyTarget } from "@t3tools/client-runtime/thread-reference";
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
-import { SidebarProjectRail } from "./sidebar/SidebarProjectRail";
+import { SidebarWorkspaceRail } from "./sidebar/SidebarWorkspaceRail";
+import { openWorkspaceDialog } from "./WorkspaceDialog";
+import { useActiveWorkspace, useWorkspaces } from "../hooks/useWorkspaces";
+import { useSwitchToWorkspace } from "../hooks/useSwitchToProject";
+import { groupInWorkspace, workspaceProjectGroups } from "../workspaces";
+import type { Workspace } from "@t3tools/contracts";
 import {
   projectThemeOptions,
   resolveProjectThemeChoice,
@@ -958,6 +962,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const projectGroupsRef = useRef(projectGroups);
   const persistedProjectScopeKeys = useUiStateStore((store) => store.sidebarProjectScopeKeys);
   const setPersistedProjectScopeKeys = useUiStateStore((store) => store.setSidebarProjectScopeKeys);
+  const setActiveWorkspaceId = useUiStateStore((store) => store.setActiveWorkspaceId);
+  const workspaces = useWorkspaces();
+  const activeWorkspace = useActiveWorkspace();
+  const switchToWorkspace = useSwitchToWorkspace();
   const allProjectSnapshotsReady = useAllEnvironmentProjectSnapshotsReady();
   const allProjectConfigsReady = useAtomValue(environmentProjects.projectConfigsReadyAtom);
   const headerSearchRef = useRef<HTMLDivElement | null>(null);
@@ -1016,7 +1024,19 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   // A scope whose project is gone reads as all projects once every snapshot has
   // loaded. The stored keys are left alone, so the scope returns with its project.
   // An archived project's scope reads as all projects, matching the menu.
-  const scopeGroups = pickableProjectGroups(projectGroups);
+  // The workspace narrows the pickable projects; the project scope narrows further.
+  const allScopeGroups = pickableProjectGroups(projectGroups);
+  const scopeGroups = activeWorkspace
+    ? workspaceProjectGroups(activeWorkspace, allScopeGroups)
+    : allScopeGroups;
+  const scopeGroupKeys = new Set(scopeGroups.map((group) => group.projectKey));
+  const workspaceScopeProjectKeys = activeWorkspace
+    ? new Set(
+        scopeGroups.flatMap((group) =>
+          group.memberProjectRefs.map((ref) => `${ref.environmentId}:${ref.projectId}`),
+        ),
+      )
+    : null;
   const archivedProjectKeys = new Set(
     projectGroups.filter((project) => project.archived).map((project) => project.projectKey),
   );
@@ -1025,13 +1045,13 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     keys: persistedProjectScopeKeys,
     settings: projectGroupingSettings,
     canClearMissingScope: allProjectSnapshotsReady && allProjectConfigsReady,
-  }).filter((key) => !archivedProjectKeys.has(key));
+  }).filter((key) => !archivedProjectKeys.has(key) && scopeGroupKeys.has(key));
   const chosenProjectGroups = scopeGroups.filter((project) =>
     chosenProjectScopeKeys.includes(project.projectKey),
   );
   const chosenScopeProjectKeys =
     chosenProjectGroups.length === 0
-      ? null
+      ? workspaceScopeProjectKeys
       : new Set(
           chosenProjectGroups.flatMap((project) =>
             project.memberProjectRefs.map(
@@ -1070,9 +1090,14 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const revealGroup = revealWidensScope
     ? resolveRouteRevealProject(
         threads.find((candidate) => threadShellKey(candidate) === routeRowThreadKey),
-        scopeGroups,
+        allScopeGroups,
       )
     : null;
+  // A thread outside the workspace leaves the workspace too.
+  const revealLeavesWorkspace =
+    revealWidensScope &&
+    activeWorkspace !== null &&
+    (revealGroup === null || !groupInWorkspace(activeWorkspace, revealGroup));
   const revealProjectKey = revealGroup?.projectKey ?? null;
   const projectScopeKeys = revealWidensScope
     ? revealProjectKey === null
@@ -1080,12 +1105,6 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       : [revealProjectKey]
     : chosenProjectScopeKeys;
   const projectScopeKey = projectScopeKeys.length === 0 ? null : projectScopeKeys.join("\n");
-  const toggleProjectScopeKey = (key: string) =>
-    setProjectScopeKeys(
-      projectScopeKeys.includes(key)
-        ? projectScopeKeys.filter((candidate) => candidate !== key)
-        : [...projectScopeKeys, key],
-    );
   // The widened scope outlives the reveal, so it is written back to the persisted
   // scope. Route changes arrive from history, links and the palette, and only this
   // component holds the project groups that decide a widening, so no single
@@ -1095,7 +1114,15 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     if (!revealWidensScope) return;
     clearSelection();
     setPersistedProjectScopeKeys(revealProjectKey === null ? [] : [revealProjectKey]);
-  }, [clearSelection, revealWidensScope, revealProjectKey, setPersistedProjectScopeKeys]);
+    if (revealLeavesWorkspace) setActiveWorkspaceId(null);
+  }, [
+    clearSelection,
+    revealWidensScope,
+    revealLeavesWorkspace,
+    revealProjectKey,
+    setActiveWorkspaceId,
+    setPersistedProjectScopeKeys,
+  ]);
   const revealActiveRow = useActiveRowReveal(routeReveal, routeRowThreadKey);
   const showProjectEnvironments = projectGroupsSpanEnvironments(projectGroups);
   const scratchMachineLabelFor = (
@@ -1115,14 +1142,15 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     ? revealGroup
       ? [revealGroup]
       : []
-    : chosenProjectGroups;
+    : chosenProjectGroups.length === 0 && activeWorkspace
+      ? scopeGroups
+      : chosenProjectGroups;
   const scopedProjectRefs = scopedProjectGroups.flatMap((project) => project.memberProjectRefs);
   const scopedProjectKeys = revealWidensScope
     ? revealGroup
       ? new Set(revealGroup.memberProjectRefs.map((ref) => `${ref.environmentId}:${ref.projectId}`))
       : null
     : chosenScopeProjectKeys;
-  const switchToProject = useSwitchToProject();
   const [projectThemeChoices, setProjectThemeChoice] = useProjectThemeChoices();
   const activeProjectLook = useActiveProjectLook();
   const threadSearch = useThreadSearch(
@@ -1176,6 +1204,29 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     if (isMobile) setOpenMobile(false);
     void handleNewThread(scopeProjectRef(group.environmentId, group.id));
   });
+  const handleWorkspaceContextMenu = useStableCallback(
+    (workspace: Workspace, position: { x: number; y: number }) => {
+      const api = readLocalApi();
+      if (!api) {
+        openWorkspaceDialog(workspace);
+        return;
+      }
+      void (async () => {
+        const clicked = await settlePromise(() =>
+          api.contextMenu.show(
+            [
+              { id: "edit", label: "Edit workspace", icon: "settings" },
+              { id: "new-workspace", label: "New workspace" },
+            ],
+            position,
+          ),
+        );
+        if (clicked._tag === "Failure") return;
+        if (clicked.value === "edit") openWorkspaceDialog(workspace);
+        if (clicked.value === "new-workspace") openWorkspaceDialog(null);
+      })();
+    },
+  );
   const handleProjectFolderContextMenu = useStableCallback(
     (group: SidebarProjectSnapshot, position: { x: number; y: number }) => {
       const api = readLocalApi();
@@ -2935,17 +2986,14 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
       <ThreadContextDragGhost />
       <SidebarChromeHeader isElectron={isElectron} />
       <div className="flex min-h-0 flex-1">
-        {scopeGroups.length > 1 ? (
-          <SidebarProjectRail
-            projects={scopeGroups}
-            selectedKeys={projectScopeKeys}
-            onSelect={(key) =>
-              switchToProject(scopeGroups.find((group) => group.projectKey === key) ?? null)
-            }
+        {workspaces.length > 0 ? (
+          <SidebarWorkspaceRail
+            workspaces={workspaces}
+            activeWorkspaceId={activeWorkspace?.id ?? null}
             mascot={activeProjectLook.mascot}
-            onToggle={toggleProjectScopeKey}
-            onProjectContextMenu={handleProjectFolderContextMenu}
-            onAddProject={openAddProjectCommandPalette}
+            onSelect={switchToWorkspace}
+            onWorkspaceContextMenu={handleWorkspaceContextMenu}
+            onAddWorkspace={() => openWorkspaceDialog(null)}
           />
         ) : null}
         <div className="flex min-w-0 flex-1 flex-col">
@@ -2956,7 +3004,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 <SidebarThreadHeader
                   searchFieldRef={headerSearchRef}
                   hasProjects={projectGroups.length > 0}
-                  onNewProject={scopeGroups.length > 1 ? null : openAddProjectCommandPalette}
+                  onNewProject={openAddProjectCommandPalette}
                   onNewThread={handleNewThreadClick}
                   newThreadDisabled={projects.length === 0}
                   newThreadShortcutLabel={newThreadShortcutLabel}

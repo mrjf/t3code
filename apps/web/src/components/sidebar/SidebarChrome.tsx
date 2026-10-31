@@ -1,4 +1,11 @@
-import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  ChartNoAxesColumnIcon,
+  ChevronDownIcon,
+  LayersIcon,
+  SettingsIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { memo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
@@ -14,6 +21,9 @@ import {
 import { primaryServerKeybindingsAtom } from "../../state/server";
 import { cn } from "../../lib/utils";
 import { useActiveProjectLook } from "../ProjectLookProvider";
+import { ProjectFavicon } from "../ProjectFavicon";
+import { ProjectSwitcherMenu } from "../ProjectSwitcherMenu";
+import { useScopedProjectGroup } from "../../hooks/useWorkspaces";
 import { usePullRequestsSupported } from "../../state/environments";
 import { T3Wordmark } from "../T3Wordmark";
 import {
@@ -91,8 +101,9 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
         />
       </div>
       <div className="relative z-10 flex h-8 min-w-0 flex-1 flex-wrap content-start items-center gap-x-2 overflow-hidden py-0.5">
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex min-w-0 shrink items-center gap-1">
           <SidebarBrand onBackdrop={onBackdrop} />
+          <HeaderProjectSwitcher onBackdrop={onBackdrop} />
           {isElectron ? (
             <div className="hidden items-center md:flex">
               <HistoryNavigationButton direction="back" onBackdrop={onBackdrop} />
@@ -193,6 +204,37 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
     >
       <SidebarBrandMark onBackdrop={onBackdrop} />
     </Link>
+  );
+}
+
+/** The project switcher sits beside the brand; the workspace rail is the level above it. */
+function HeaderProjectSwitcher({ onBackdrop }: { onBackdrop: boolean }) {
+  const scoped = useScopedProjectGroup();
+  if (scoped.projects.length === 0) return null;
+  const name = scoped.group?.displayName ?? scoped.label;
+  return (
+    <ProjectSwitcherMenu
+      trigger={
+        <button
+          type="button"
+          aria-label={`${name}, switch project`}
+          className={cn(
+            "[-webkit-app-region:no-drag] inline-flex h-7 min-w-0 max-w-48 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-sm font-medium outline-hidden ring-ring transition-colors focus-visible:ring-2 focus-visible:ring-inset",
+            onBackdrop
+              ? "text-white/90 hover:bg-white/15 hover:text-white"
+              : "text-foreground hover:bg-sidebar-row-hover",
+          )}
+        />
+      }
+    >
+      {scoped.group ? (
+        <ProjectFavicon project={scoped.group} className="size-4 shrink-0" />
+      ) : (
+        <LayersIcon className="size-4 shrink-0 opacity-70" />
+      )}
+      <span className="truncate">{name}</span>
+      <ChevronDownIcon className="size-3 shrink-0 opacity-70" />
+    </ProjectSwitcherMenu>
   );
 }
 

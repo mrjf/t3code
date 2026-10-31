@@ -1,4 +1,5 @@
 import { useAtomValue } from "@effect/atom-react";
+import type { Workspace } from "@t3tools/contracts";
 import { LayersIcon, PlusIcon } from "lucide-react";
 import { useEffect, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 
@@ -6,18 +7,16 @@ import { isCommandPaletteOpen } from "../../commandPaletteBus";
 import { useStableCallback } from "../../hooks/useStableCallback";
 import { useTerminalFocus } from "../../hooks/useTerminalFocus";
 import {
-  projectJumpHintForIndex,
-  projectJumpIndexFromCommand,
   resolveShortcutCommand,
-  shouldShowProjectJumpHintsForModifiers,
+  shouldShowWorkspaceJumpHintsForModifiers,
+  workspaceJumpHintForIndex,
+  workspaceJumpIndexFromCommand,
 } from "../../keybindings";
 import { isTerminalFocused } from "../../lib/terminalFocus";
 import { useShortcutModifierState } from "../../shortcutModifierState";
 import { primaryServerKeybindingsAtom } from "../../state/server";
 import { useThreadJumpHintsVisible } from "../Sidebar.logic";
 
-import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
-import { ProjectFavicon } from "../ProjectFavicon";
 import { SidebarMenuButton } from "../ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 
@@ -65,10 +64,32 @@ function RailButton(props: {
   );
 }
 
-/** ⌘⌥ plus a project's key switches to it; holding ⌘⌥ shows each project's key. */
-function useProjectJumpShortcuts(
-  projects: readonly SidebarProjectSnapshot[],
-  onJump: (project: SidebarProjectSnapshot) => void,
+/** A workspace's glyph: its icon, or else the first letters of its name. */
+function WorkspaceGlyph({
+  workspace,
+  className,
+}: {
+  workspace: Pick<Workspace, "name" | "icon">;
+  className?: string;
+}) {
+  const text =
+    workspace.icon ??
+    workspace.name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((word) => word[0]?.toUpperCase() ?? "")
+      .join("");
+  return (
+    <span aria-hidden className={className ?? "text-sm leading-none font-semibold tracking-tight"}>
+      {text}
+    </span>
+  );
+}
+
+/** ⌘⌥ plus a workspace's key switches to it; holding ⌘⌥ shows each workspace's key. */
+function useWorkspaceJumpShortcuts(
+  workspaces: readonly Workspace[],
+  onJump: (workspace: Workspace) => void,
 ): ReadonlyArray<string | null> | null {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const modifiers = useShortcutModifierState();
@@ -79,85 +100,74 @@ function useProjectJumpShortcuts(
       platform: navigator.platform,
       context: { terminalFocus: isTerminalFocused() },
     });
-    const index = projectJumpIndexFromCommand(command ?? "");
-    const project = index === null ? undefined : projects[index];
-    if (!project) return;
+    const index = workspaceJumpIndexFromCommand(command ?? "");
+    const workspace = index === null ? undefined : workspaces[index];
+    if (!workspace) return;
     event.preventDefault();
     event.stopPropagation();
-    onJump(project);
+    onJump(workspace);
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- listens for project jump shortcuts on the window
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- listens for workspace jump shortcuts on the window
   useEffect(() => {
     window.addEventListener("keydown", jump);
     return () => window.removeEventListener("keydown", jump);
   }, [jump]);
   const options = { platform: navigator.platform, context: { terminalFocus: terminalFocused } };
   const visible = useThreadJumpHintsVisible(
-    shouldShowProjectJumpHintsForModifiers(modifiers, keybindings, options),
+    shouldShowWorkspaceJumpHintsForModifiers(modifiers, keybindings, options),
   );
   return visible
-    ? projects.map((_, index) => projectJumpHintForIndex(keybindings, index, options))
+    ? workspaces.map((_, index) => workspaceJumpHintForIndex(keybindings, index, options))
     : null;
 }
 
-/** Choosing a project scopes the whole app to it. */
-export function SidebarProjectRail(props: {
-  projects: readonly SidebarProjectSnapshot[];
-  selectedKeys: readonly string[];
+/** Choosing a workspace scopes the whole app to its projects. */
+export function SidebarWorkspaceRail(props: {
+  workspaces: readonly Workspace[];
+  activeWorkspaceId: string | null;
   mascot: string | null;
-  onSelect: (projectKey: string | null) => void;
-  onToggle: (projectKey: string) => void;
-  onProjectContextMenu: (
-    project: SidebarProjectSnapshot,
-    position: { x: number; y: number },
-  ) => void;
-  onAddProject: () => void;
+  onSelect: (workspace: Workspace | null) => void;
+  onWorkspaceContextMenu: (workspace: Workspace, position: { x: number; y: number }) => void;
+  onAddWorkspace: () => void;
 }) {
-  const jumpHints = useProjectJumpShortcuts(props.projects, (project) =>
-    props.onSelect(project.projectKey),
-  );
+  const jumpHints = useWorkspaceJumpShortcuts(props.workspaces, props.onSelect);
   return (
     <div className="flex w-12 shrink-0 flex-col items-center border-r border-sidebar-border">
       <ul
-        aria-label="Projects"
+        aria-label="Workspaces"
         className="flex w-full min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto scrollbar-gutter-both py-2"
       >
         <RailButton
           label="All projects"
-          selected={props.selectedKeys.length === 0}
+          selected={props.activeWorkspaceId === null}
           onClick={() => props.onSelect(null)}
         >
           <LayersIcon />
         </RailButton>
-        {props.projects.map((project, index) => (
+        {props.workspaces.map((workspace, index) => (
           <RailButton
-            key={project.projectKey}
+            key={workspace.id}
             jumpHint={jumpHints?.[index] ?? null}
-            label={project.displayName}
-            tooltip={`${project.displayName} · Shift-click to add`}
-            selected={props.selectedKeys.includes(project.projectKey)}
-            onClick={(event) =>
-              event.shiftKey
-                ? props.onToggle(project.projectKey)
-                : props.onSelect(project.projectKey)
-            }
+            label={workspace.name}
+            selected={props.activeWorkspaceId === workspace.id}
+            onClick={() => props.onSelect(workspace)}
             onContextMenu={(event) => {
               event.preventDefault();
               // The Menu key and Shift+F10 report no pointer position.
               const fromKeyboard = event.clientX === 0 && event.clientY === 0;
               const rect = event.currentTarget.getBoundingClientRect();
-              props.onProjectContextMenu(
-                project,
+              props.onWorkspaceContextMenu(
+                workspace,
                 fromKeyboard
                   ? { x: rect.right, y: rect.top }
                   : { x: event.clientX, y: event.clientY },
               );
             }}
           >
-            <ProjectFavicon project={project} className="size-5" />
+            <WorkspaceGlyph workspace={workspace} />
           </RailButton>
         ))}
-        <RailButton label="Add project" onClick={props.onAddProject}>
+        <RailButton label="New workspace" onClick={props.onAddWorkspace}>
           <PlusIcon />
         </RailButton>
       </ul>

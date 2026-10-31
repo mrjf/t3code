@@ -3,24 +3,32 @@
 Use a new thread for a separate task. Choose **New worktree** when its code changes
 need a separate branch and working directory.
 
-## Switch projects
+## Switch workspaces and projects
 
-With more than one project, the project rail runs down the left edge of the sidebar. Choose a
-project to switch the whole app to it: the thread list, search and new threads stay in that
-project, and **All projects** at the top shows everything again. Shift-click to show several
-projects at once. Press `mod+alt+1` to `mod+alt+9`, then `mod+alt` with a letter, to switch to
-the rail's projects in order; hold `mod+alt` to see each project's key. The project name in the
-thread header switches projects too. Opening a thread from another project, from a link or the command palette,
-switches to its project.
+A workspace is a named set of projects, such as **Personal** and **Work**, that can bring its
+own look. Once you have one, the workspace rail runs down the left edge of the sidebar. Choose
+a workspace to switch the whole app to its projects: the thread list, search and new threads
+stay inside it, and **All projects** at the top shows everything again. Press `mod+alt+1` to
+`mod+alt+9`, then `mod+alt` with a letter, to switch to the rail's workspaces in order; hold
+`mod+alt` to see each workspace's key. Right-click a workspace to edit it.
 
-Right-click a project in the rail to pin it, open its settings, or choose its theme. A project
-whose `t3.json` declares an `appearance` gets its own look while it is open; choose **My theme**
-there to keep yours. See [Project settings](./project-settings.md#project-appearance).
+The project switcher sits beside the T3 Code mark at the top of the sidebar, and in the thread
+header while the sidebar is closed. It lists the current workspace's projects; choose one to
+scope the app to that project, or **All in** the workspace to see them all. Its menu also
+creates a workspace. Opening a thread from another project, from a link or the command
+palette, switches to its project, and leaves the workspace if the project is outside it.
+
+Workspaces are saved on every connected environment, so each machine lists the same ones. A
+project belongs to a workspace on every machine that has a checkout of its repository.
+
+A workspace's theme, colors and fonts apply while it is active. A project whose `t3.json`
+declares an `appearance` paints over them while it is open; choose **My theme** for that
+project to keep yours. See [Project settings](./project-settings.md#project-appearance).
 
 ## Start a thread
 
-On web and desktop, a new thread starts in the project you switched to in the project
-rail, or else keeps the current project. It carries your model
+On web and desktop, a new thread starts in the project you switched to, or else keeps the
+current project. It carries your model
 and mode selections, unless the destination project has its own model default.
 Its branch and workspace mode come from your configured defaults. To continue in
 an existing worktree, use **New thread in this worktree** from the branch toolbar.

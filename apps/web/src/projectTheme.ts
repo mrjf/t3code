@@ -1,4 +1,4 @@
-import type { T3ProjectFileAppearance } from "@t3tools/contracts";
+import type { T3ProjectFileAppearance, WorkspaceAppearance } from "@t3tools/contracts";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
 import * as Schema from "effect/Schema";
 
@@ -89,19 +89,35 @@ export function resolveProjectLayers(input: {
   }
   if (!projectAppearance) return NO_PROJECT_LAYERS;
   const brand = projectAppearance[appearance];
-  const tint =
-    projectTheme === null && brand
-      ? {
-          "--background": brand.background,
-          "--app-chrome-background": brand.background,
-          "--toolbar-background": brand.background,
-          "--sidebar": brand.background,
-          "--primary": brand.accent,
-          "--primary-foreground": readableOn(brand.accent),
-          "--ring": brand.accent,
-        }
-      : null;
+  const tint = projectTheme === null && brand ? tintFor(brand) : null;
   return { theme: projectTheme, tint, fonts: projectAppearance.fonts ?? null };
+}
+
+function tintFor(brand: { readonly background: string; readonly accent: string }) {
+  return {
+    "--background": brand.background,
+    "--app-chrome-background": brand.background,
+    "--toolbar-background": brand.background,
+    "--sidebar": brand.background,
+    "--primary": brand.accent,
+    "--primary-foreground": readableOn(brand.accent),
+    "--ring": brand.accent,
+  };
+}
+
+/** A workspace paints a built-in theme by id, or tints the user's theme, and sets fonts. */
+export function resolveWorkspaceLayers(
+  workspaceAppearance: WorkspaceAppearance | null,
+  appearance: ThemeAppearance,
+): ProjectLayers {
+  if (!workspaceAppearance) return NO_PROJECT_LAYERS;
+  const theme = workspaceAppearance.theme ? getThemeDefinition(workspaceAppearance.theme) : null;
+  const brand = workspaceAppearance[appearance];
+  return {
+    theme,
+    tint: theme === null && brand ? tintFor(brand) : null,
+    fonts: workspaceAppearance.fonts ?? null,
+  };
 }
 
 /** Sets the tint inline, where it outranks the stylesheet's theme selectors, and returns its undo. */

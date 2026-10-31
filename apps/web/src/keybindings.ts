@@ -5,10 +5,10 @@ import {
   type ResolvedKeybindingRule,
   MODEL_PICKER_JUMP_KEYBINDING_COMMANDS,
   type ResolvedKeybindingsConfig,
-  PROJECT_JUMP_KEYBINDING_COMMANDS,
+  WORKSPACE_JUMP_KEYBINDING_COMMANDS,
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ModelPickerJumpKeybindingCommand,
-  type ProjectJumpKeybindingCommand,
+  type WorkspaceJumpKeybindingCommand,
   type ThreadJumpKeybindingCommand,
 } from "@t3tools/contracts";
 import {
@@ -287,31 +287,33 @@ export function shouldShowThreadJumpHintsForModifiers(
   );
 }
 
-export function shouldShowProjectJumpHintsForModifiers(
+export function shouldShowWorkspaceJumpHintsForModifiers(
   modifiers: ShortcutModifierStateLike,
   keybindings: ResolvedKeybindingsConfig,
   options?: ShortcutMatchOptions,
 ): boolean {
   return shouldShowJumpHintsForModifiers(
-    PROJECT_JUMP_KEYBINDING_COMMANDS,
+    WORKSPACE_JUMP_KEYBINDING_COMMANDS,
     modifiers,
     keybindings,
     options,
   );
 }
 
-export function projectJumpIndexFromCommand(command: string): number | null {
-  const index = PROJECT_JUMP_KEYBINDING_COMMANDS.indexOf(command as ProjectJumpKeybindingCommand);
+export function workspaceJumpIndexFromCommand(command: string): number | null {
+  const index = WORKSPACE_JUMP_KEYBINDING_COMMANDS.indexOf(
+    command as WorkspaceJumpKeybindingCommand,
+  );
   return index === -1 ? null : index;
 }
 
-/** The key a project's jump shortcut ends in, for the rail's hold-to-show badge. */
-export function projectJumpHintForIndex(
+/** The key a workspace's jump shortcut ends in, for the rail's hold-to-show badge. */
+export function workspaceJumpHintForIndex(
   keybindings: ResolvedKeybindingsConfig,
   index: number,
   options?: ShortcutMatchOptions,
 ): string | null {
-  const command = PROJECT_JUMP_KEYBINDING_COMMANDS[index];
+  const command = WORKSPACE_JUMP_KEYBINDING_COMMANDS[index];
   if (!command) return null;
   const key = findEffectiveShortcutForCommand(keybindings, command, options)?.key;
   return key ? key.toUpperCase() : null;

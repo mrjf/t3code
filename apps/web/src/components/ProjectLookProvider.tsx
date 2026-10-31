@@ -4,6 +4,7 @@ import { useLocation } from "@tanstack/react-router";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
+import { useActiveWorkspace } from "../hooks/useWorkspaces";
 import { useT3ProjectFileState } from "../hooks/useT3ProjectFileScripts";
 import { setProjectFonts, type ProjectFonts } from "../appearanceFonts";
 import { setProjectTheme, useTheme } from "../hooks/useTheme";
@@ -13,6 +14,7 @@ import {
   resolveProjectLayers,
   resolveProjectThemeChoice,
   resolveProjectWallpaper,
+  resolveWorkspaceLayers,
   useProjectThemeChoices,
 } from "../projectTheme";
 import { useUiStateStore } from "../uiStateStore";
@@ -55,9 +57,13 @@ function useProjectFileText(environmentId: EnvironmentId, cwd: string, path: str
   return query.data && !query.data.truncated ? query.data.contents : null;
 }
 
-/** Applies the scoped project's look app-wide; lives above the sidebar so the mobile sheet can close. */
+/**
+ * Applies the workspace's look app-wide, and the scoped project's look over it; lives above the
+ * sidebar so the mobile sheet can close.
+ */
 export function ProjectLookProvider({ children }: { children: ReactNode }) {
   const scopeKeys = useUiStateStore((store) => store.sidebarProjectScopeKeys);
+  const workspace = useActiveWorkspace();
   const groups = pickableProjectGroups(useSidebarProjectGroups());
   const project =
     scopeKeys.length === 1
@@ -85,7 +91,27 @@ export function ProjectLookProvider({ children }: { children: ReactNode }) {
     usesProjectLook ? (projectAppearance?.theme ?? null) : null,
   );
   const projectTheme = parseProjectThemeFile(themeFileText);
-  const layers = resolveProjectLayers({ choice, projectAppearance, projectTheme, appearance });
+  const projectLayers = resolveProjectLayers({
+    choice,
+    projectAppearance,
+    projectTheme,
+    appearance,
+  });
+  // The project's look wins where it says something; the workspace fills in the rest.
+  const workspaceLayers = resolveWorkspaceLayers(
+    onSettings ? null : (workspace?.appearance ?? null),
+    appearance,
+  );
+  const layers =
+    usesProjectLook && projectAppearance
+      ? {
+          theme: projectLayers.theme ?? (projectLayers.tint ? null : workspaceLayers.theme),
+          tint: projectLayers.tint ?? (projectLayers.theme ? null : workspaceLayers.tint),
+          fonts: { ...workspaceLayers.fonts, ...projectLayers.fonts },
+        }
+      : choice === "none"
+        ? workspaceLayers
+        : projectLayers;
 
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- hands the project's theme to the theme system, which paints the document root
   useEffect(() => {
@@ -94,7 +120,8 @@ export function ProjectLookProvider({ children }: { children: ReactNode }) {
     return () => setProjectTheme(null);
   }, [layers.theme]);
 
-  const fontsKey = layers.fonts ? JSON.stringify(layers.fonts) : null;
+  const fontsKey =
+    layers.fonts && Object.keys(layers.fonts).length > 0 ? JSON.stringify(layers.fonts) : null;
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- hands the project's fonts to the appearance settings, which set the root font variables
   useEffect(() => {
     if (fontsKey === null) return;
