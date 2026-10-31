@@ -44,7 +44,10 @@ export function SidebarProjectRail(props: {
   selectedKeys: readonly string[];
   onSelect: (projectKey: string | null) => void;
   onToggle: (projectKey: string) => void;
-  onProjectSettings: (event: ReactMouseEvent<HTMLElement>, project: SidebarProjectSnapshot) => void;
+  onProjectContextMenu: (
+    project: SidebarProjectSnapshot,
+    position: { x: number; y: number },
+  ) => void;
   onAddProject: () => void;
 }) {
   return (
@@ -67,7 +70,10 @@ export function SidebarProjectRail(props: {
           onClick={(event) =>
             event.shiftKey ? props.onToggle(project.projectKey) : props.onSelect(project.projectKey)
           }
-          onContextMenu={(event) => props.onProjectSettings(event, project)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            props.onProjectContextMenu(project, { x: event.clientX, y: event.clientY });
+          }}
         >
           <ProjectFavicon project={project} className="size-5" />
         </SidebarProjectRailButton>
