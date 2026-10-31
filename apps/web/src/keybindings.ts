@@ -5,8 +5,10 @@ import {
   type ResolvedKeybindingRule,
   MODEL_PICKER_JUMP_KEYBINDING_COMMANDS,
   type ResolvedKeybindingsConfig,
+  PROJECT_JUMP_KEYBINDING_COMMANDS,
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ModelPickerJumpKeybindingCommand,
+  type ProjectJumpKeybindingCommand,
   type ThreadJumpKeybindingCommand,
 } from "@t3tools/contracts";
 import {
@@ -277,6 +279,50 @@ export function shouldShowThreadJumpHintsForModifiers(
   keybindings: ResolvedKeybindingsConfig,
   options?: ShortcutMatchOptions,
 ): boolean {
+  return shouldShowJumpHintsForModifiers(
+    THREAD_JUMP_KEYBINDING_COMMANDS,
+    modifiers,
+    keybindings,
+    options,
+  );
+}
+
+export function shouldShowProjectJumpHintsForModifiers(
+  modifiers: ShortcutModifierStateLike,
+  keybindings: ResolvedKeybindingsConfig,
+  options?: ShortcutMatchOptions,
+): boolean {
+  return shouldShowJumpHintsForModifiers(
+    PROJECT_JUMP_KEYBINDING_COMMANDS,
+    modifiers,
+    keybindings,
+    options,
+  );
+}
+
+export function projectJumpIndexFromCommand(command: string): number | null {
+  const index = PROJECT_JUMP_KEYBINDING_COMMANDS.indexOf(command as ProjectJumpKeybindingCommand);
+  return index === -1 ? null : index;
+}
+
+/** The key a project's jump shortcut ends in, for the rail's hold-to-show badge. */
+export function projectJumpHintForIndex(
+  keybindings: ResolvedKeybindingsConfig,
+  index: number,
+  options?: ShortcutMatchOptions,
+): string | null {
+  const command = PROJECT_JUMP_KEYBINDING_COMMANDS[index];
+  if (!command) return null;
+  const key = findEffectiveShortcutForCommand(keybindings, command, options)?.key;
+  return key ? key.toUpperCase() : null;
+}
+
+function shouldShowJumpHintsForModifiers(
+  commands: ReadonlyArray<KeybindingCommand>,
+  modifiers: ShortcutModifierStateLike,
+  keybindings: ResolvedKeybindingsConfig,
+  options?: ShortcutMatchOptions,
+): boolean {
   // Ghostty can write keys to the shell before window shortcuts run, regardless of the when clause.
   if (resolveContext(options).terminalFocus) {
     return false;
@@ -284,7 +330,7 @@ export function shouldShowThreadJumpHintsForModifiers(
 
   const platform = resolvePlatform(options);
 
-  for (const command of THREAD_JUMP_KEYBINDING_COMMANDS) {
+  for (const command of commands) {
     const shortcut = findEffectiveShortcutForCommand(keybindings, command, options);
     if (!shortcut) continue;
     if (matchesKeybindingShortcutModifiers(modifiers, shortcut, platform)) {

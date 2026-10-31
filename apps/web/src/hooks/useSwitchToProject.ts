@@ -10,6 +10,7 @@ import { useThreadSelectionStore } from "~/threadSelectionStore";
 import { buildThreadRouteParams } from "~/threadRoutes";
 import { useUiStateStore } from "~/uiStateStore";
 import { useHandleNewThread } from "./useHandleNewThread";
+import { useStableCallback } from "./useStableCallback";
 
 interface SwitchableProject {
   readonly projectKey: string;
@@ -30,7 +31,7 @@ export function useSwitchToProject() {
   const { handleNewThread } = useHandleNewThread();
   const { isMobile, setOpenMobile } = useSidebar();
 
-  return (project: SwitchableProject | null) => {
+  return useStableCallback((project: SwitchableProject | null) => {
     setProjectScope(project ? [project.projectKey] : []);
     if (project === null) return;
     if (isMobile) setOpenMobile(false);
@@ -52,5 +53,5 @@ export function useSwitchToProject() {
     } else {
       void handleNewThread(scopeProjectRef(project.environmentId, project.id));
     }
-  };
+  });
 }

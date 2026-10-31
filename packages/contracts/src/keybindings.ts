@@ -20,6 +20,32 @@ export const THREAD_JUMP_KEYBINDING_COMMANDS = [
 ] as const;
 export type ThreadJumpKeybindingCommand = (typeof THREAD_JUMP_KEYBINDING_COMMANDS)[number];
 
+// ⌘⌥ plus 1-9, then letters no browser, macOS or T3 shortcut already claims with ⌘⌥.
+export const PROJECT_JUMP_KEYBINDING_COMMANDS = [
+  "project.jump.1",
+  "project.jump.2",
+  "project.jump.3",
+  "project.jump.4",
+  "project.jump.5",
+  "project.jump.6",
+  "project.jump.7",
+  "project.jump.8",
+  "project.jump.9",
+  "project.jump.g",
+  "project.jump.k",
+  "project.jump.o",
+  "project.jump.p",
+  "project.jump.q",
+  "project.jump.r",
+  "project.jump.s",
+  "project.jump.t",
+  "project.jump.v",
+  "project.jump.x",
+  "project.jump.y",
+  "project.jump.z",
+] as const;
+export type ProjectJumpKeybindingCommand = (typeof PROJECT_JUMP_KEYBINDING_COMMANDS)[number];
+
 export const MODEL_PICKER_JUMP_KEYBINDING_COMMANDS = [
   "modelPicker.jump.1",
   "modelPicker.jump.2",
@@ -55,6 +81,7 @@ const MODEL_PICKER_KEYBINDING_COMMANDS = [
 ] as const;
 
 export const STATIC_KEYBINDING_COMMANDS = [
+  ...PROJECT_JUMP_KEYBINDING_COMMANDS,
   "workspace.focusNext",
   "workspace.focusPrevious",
   "sidebar.toggle",

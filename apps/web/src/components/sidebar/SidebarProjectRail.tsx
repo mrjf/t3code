@@ -1,5 +1,20 @@
+import { useAtomValue } from "@effect/atom-react";
 import { LayersIcon, PlusIcon } from "lucide-react";
-import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
+import { useEffect, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+
+import { isCommandPaletteOpen } from "../../commandPaletteBus";
+import { useStableCallback } from "../../hooks/useStableCallback";
+import { useTerminalFocus } from "../../hooks/useTerminalFocus";
+import {
+  projectJumpHintForIndex,
+  projectJumpIndexFromCommand,
+  resolveShortcutCommand,
+  shouldShowProjectJumpHintsForModifiers,
+} from "../../keybindings";
+import { isTerminalFocused } from "../../lib/terminalFocus";
+import { useShortcutModifierState } from "../../shortcutModifierState";
+import { primaryServerKeybindingsAtom } from "../../state/server";
+import { useThreadJumpHintsVisible } from "../Sidebar.logic";
 
 import type { SidebarProjectSnapshot } from "../../sidebarProjectGrouping";
 import { ProjectFavicon } from "../ProjectFavicon";
@@ -8,6 +23,7 @@ import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 
 function RailButton(props: {
   label: string;
+  jumpHint?: string | null;
   tooltip?: string;
   selected?: boolean;
   onClick: (event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -40,8 +56,48 @@ function RailButton(props: {
         </TooltipTrigger>
         <TooltipPopup side="right">{props.tooltip ?? props.label}</TooltipPopup>
       </Tooltip>
+      {props.jumpHint ? (
+        <kbd className="pointer-events-none absolute bottom-0 left-1 grid h-3.5 min-w-3.5 place-items-center rounded-sm bg-muted px-0.5 font-sans text-3xs leading-none font-medium text-muted-foreground ring-1 ring-sidebar-border">
+          {props.jumpHint}
+        </kbd>
+      ) : null}
     </li>
   );
+}
+
+/** ⌘⌥ plus a project's key switches to it; holding ⌘⌥ shows each project's key. */
+function useProjectJumpShortcuts(
+  projects: readonly SidebarProjectSnapshot[],
+  onJump: (project: SidebarProjectSnapshot) => void,
+): ReadonlyArray<string | null> | null {
+  const keybindings = useAtomValue(primaryServerKeybindingsAtom);
+  const modifiers = useShortcutModifierState();
+  const terminalFocused = useTerminalFocus();
+  const jump = useStableCallback((event: KeyboardEvent) => {
+    if (event.defaultPrevented || event.repeat || isCommandPaletteOpen()) return;
+    const command = resolveShortcutCommand(event, keybindings, {
+      platform: navigator.platform,
+      context: { terminalFocus: isTerminalFocused() },
+    });
+    const index = projectJumpIndexFromCommand(command ?? "");
+    const project = index === null ? undefined : projects[index];
+    if (!project) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onJump(project);
+  });
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- listens for project jump shortcuts on the window
+  useEffect(() => {
+    window.addEventListener("keydown", jump);
+    return () => window.removeEventListener("keydown", jump);
+  }, [jump]);
+  const options = { platform: navigator.platform, context: { terminalFocus: terminalFocused } };
+  const visible = useThreadJumpHintsVisible(
+    shouldShowProjectJumpHintsForModifiers(modifiers, keybindings, options),
+  );
+  return visible
+    ? projects.map((_, index) => projectJumpHintForIndex(keybindings, index, options))
+    : null;
 }
 
 /** Choosing a project scopes the whole app to it. */
@@ -57,6 +113,9 @@ export function SidebarProjectRail(props: {
   ) => void;
   onAddProject: () => void;
 }) {
+  const jumpHints = useProjectJumpShortcuts(props.projects, (project) =>
+    props.onSelect(project.projectKey),
+  );
   return (
     <div className="flex w-12 shrink-0 flex-col items-center border-r border-sidebar-border">
       <ul
@@ -70,9 +129,10 @@ export function SidebarProjectRail(props: {
         >
           <LayersIcon />
         </RailButton>
-        {props.projects.map((project) => (
+        {props.projects.map((project, index) => (
           <RailButton
             key={project.projectKey}
+            jumpHint={jumpHints?.[index] ?? null}
             label={project.displayName}
             tooltip={`${project.displayName} · Shift-click to add`}
             selected={props.selectedKeys.includes(project.projectKey)}
