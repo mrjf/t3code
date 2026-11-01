@@ -233,6 +233,23 @@ DMGs default to the host architecture. Use `--arch` to choose another target and
 to retain packaging files for inspection. Run `vp run dist:desktop:artifact --help` for other
 options.
 
+### Personal flavors
+
+`--flavor <name>` (or `T3CODE_DESKTOP_FLAVOR`) builds a copy that installs beside the official
+app instead of replacing it, for running a fork day to day:
+
+```sh
+vp run dist:desktop:dmg --flavor rail
+```
+
+The flavor name is lower-case letters, digits and dashes. The build is named "T3 Code (Rail)",
+has the bundle id `com.t3tools.t3code.rail`, keeps its state in `~/.t3-rail` (so its `t3`
+command is `~/.t3-rail/bin/t3`) and its browser profile and keychain item apart from the
+official app's, claims no `t3code://` links, and reports automatic updates as disabled: update
+it by rebuilding. `T3CODE_HOME` still overrides the state directory. The app learns its flavor
+from `LSEnvironment` in its Info.plist on macOS; on Linux and Windows, set
+`T3CODE_DESKTOP_FLAVOR` in the launcher.
+
 ### Linux AppImage prerequisites
 
 Build on Linux because the browser-secret helper links against the host's libsecret. Install

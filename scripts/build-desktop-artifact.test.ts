@@ -1648,6 +1648,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
             mockUpdates: Option.none(),
             mockUpdateServerPort: Option.none(),
             wslRuntime: Option.none(),
+            flavor: Option.none(),
           }),
         );
 
@@ -1672,6 +1673,7 @@ it.layer(NodeServices.layer)("build-desktop-artifact", (it) => {
         mockUpdates: Option.some(false),
         mockUpdateServerPort: Option.none(),
         wslRuntime: Option.none(),
+        flavor: Option.none(),
       }).pipe(
         Effect.provide(
           ConfigProvider.layer(

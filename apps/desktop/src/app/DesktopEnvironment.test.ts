@@ -3,6 +3,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 
 import * as DesktopEnvironment from "./DesktopEnvironment.ts";
 import * as DesktopConfig from "./DesktopConfig.ts";
@@ -70,6 +71,43 @@ describe("DesktopEnvironment", () => {
 
       assert.equal(development.stateDir, "/Users/alice/.t3/dev");
       assert.equal(production.stateDir, "/Users/alice/.t3/userdata");
+    }),
+  );
+
+  it.effect("gives a flavored build its own name, state and ids beside the official app", () =>
+    Effect.gen(function* () {
+      const flavored = yield* makeEnvironment(
+        { isPackaged: true },
+        { T3CODE_DESKTOP_FLAVOR: "rail" },
+      );
+
+      assert.deepEqual(flavored.flavor, Option.some("rail"));
+      assert.equal(flavored.baseDir, "/Users/alice/.t3-rail");
+      assert.equal(flavored.stateDir, "/Users/alice/.t3-rail/userdata");
+      assert.equal(flavored.displayName, "T3 Code (Rail)");
+      assert.equal(flavored.branding.stageLabel, "Rail");
+      assert.equal(flavored.appUserModelId, "com.t3tools.t3code.rail");
+    }),
+  );
+
+  it.effect("lets T3CODE_HOME override a flavored build's state directory", () =>
+    Effect.gen(function* () {
+      const flavored = yield* makeEnvironment(
+        {},
+        { T3CODE_DESKTOP_FLAVOR: "rail", T3CODE_HOME: "/srv/t3" },
+      );
+
+      assert.equal(flavored.stateDir, "/srv/t3/userdata");
+    }),
+  );
+
+  it.effect("ignores a flavor that cannot name files and bundle ids", () =>
+    Effect.gen(function* () {
+      const environment = yield* makeEnvironment({}, { T3CODE_DESKTOP_FLAVOR: "My Build!" });
+
+      assert.deepEqual(environment.flavor, Option.none());
+      assert.equal(environment.stateDir, "/Users/alice/.t3/userdata");
+      assert.equal(environment.displayName, "T3 Code (Beta)");
     }),
   );
 });

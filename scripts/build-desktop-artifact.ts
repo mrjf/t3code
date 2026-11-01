@@ -188,6 +188,7 @@ interface BuildCliInput {
   readonly mockUpdates: Option.Option<boolean>;
   readonly mockUpdateServerPort: Option.Option<number>;
   readonly wslRuntime: Option.Option<string>;
+  readonly flavor: Option.Option<string>;
 }
 
 function detectHostBuildPlatform(hostPlatform: string): typeof BuildPlatform.Type | undefined {
@@ -950,6 +951,8 @@ interface ResolvedBuildOptions {
   readonly mockUpdates: boolean;
   readonly mockUpdateServerPort: number | undefined;
   readonly wslRuntime: string | undefined;
+  /** A personal build installed beside the official app: own name, bundle id, state and profile. */
+  readonly flavor: string | undefined;
 }
 
 interface StagePackageJson {
@@ -1643,7 +1646,24 @@ const BuildEnvConfig = Config.all({
   mockUpdates: Config.Boolean("T3CODE_DESKTOP_MOCK_UPDATES").pipe(Config.withDefault(false)),
   mockUpdateServerPort: Config.String("T3CODE_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(Config.option),
   wslRuntime: Config.String("T3CODE_DESKTOP_WSL_RUNTIME").pipe(Config.option),
+  flavor: Config.String("T3CODE_DESKTOP_FLAVOR").pipe(Config.option),
 });
+
+const DESKTOP_FLAVOR_PATTERN = /^[a-z][a-z0-9-]*$/;
+
+export class InvalidDesktopFlavorError extends Schema.TaggedError<InvalidDesktopFlavorError>()(
+  "InvalidDesktopFlavorError",
+  { flavor: Schema.String },
+) {
+  override get message() {
+    return `Desktop flavor "${this.flavor}" must be lower-case letters, digits and dashes, starting with a letter.`;
+  }
+}
+
+/** "rail" shows as "Rail" in the app name, the way Beta and Nightly do. */
+export function resolveDesktopFlavorLabel(flavor: string): string {
+  return flavor.charAt(0).toUpperCase() + flavor.slice(1);
+}
 
 const MockUpdateServerPortSchema = Schema.NumberFromString.check(
   Schema.isInt(),
@@ -1736,6 +1756,14 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   const wslRuntime =
     Option.getOrUndefined(input.wslRuntime) ?? Option.getOrUndefined(env.wslRuntime);
 
+  const rawFlavor = (Option.getOrUndefined(input.flavor) ?? Option.getOrUndefined(env.flavor))
+    ?.trim()
+    .toLowerCase();
+  const flavor = rawFlavor === undefined || rawFlavor.length === 0 ? undefined : rawFlavor;
+  if (flavor !== undefined && !DESKTOP_FLAVOR_PATTERN.test(flavor)) {
+    return yield* new InvalidDesktopFlavorError({ flavor });
+  }
+
   return {
     platform,
     target,
@@ -1749,6 +1777,7 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
     mockUpdates,
     mockUpdateServerPort,
     wslRuntime,
+    flavor,
   } satisfies ResolvedBuildOptions;
 });
 
@@ -2748,7 +2777,8 @@ export function resolvePackageManagerUserAgent(packageManager: string): string {
   return `${trimmed.slice(0, versionSeparator)}/${trimmed.slice(versionSeparator + 1)}`;
 }
 
-export function resolveDesktopProductName(version: string): string {
+export function resolveDesktopProductName(version: string, flavor?: string): string {
+  if (flavor !== undefined) return `T3 Code (${resolveDesktopFlavorLabel(flavor)})`;
   return resolveDesktopUpdateChannel(version) === "nightly"
     ? "T3 Code (Nightly)"
     : (desktopPackageJson.productName ?? "T3 Code");
@@ -2769,11 +2799,15 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     | undefined,
   wslRuntimeBundled = false,
   arch?: typeof BuildArch.Type,
+  flavor?: string,
 ) {
   const buildConfig: Record<string, unknown> = {
-    appId: DESKTOP_APP_ID,
-    productName: resolveDesktopProductName(version),
-    artifactName: "T3-Code-${version}-${arch}.${ext}",
+    appId: flavor === undefined ? DESKTOP_APP_ID : `${DESKTOP_APP_ID}.${flavor}`,
+    productName: resolveDesktopProductName(version, flavor),
+    artifactName:
+      flavor === undefined
+        ? "T3-Code-${version}-${arch}.${ext}"
+        : `T3-Code-${flavor}-\${version}-\${arch}.\${ext}`,
     electronLanguages: [...DESKTOP_ELECTRON_LANGUAGES],
     files: [
       ...DESKTOP_FILE_EXCLUSIONS,
@@ -2823,6 +2857,8 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
       icon: "icon.icns",
       category: "public.app-category.developer-tools",
       extendInfo: {
+        // Finder launches carry no shell environment; the plist tells the app which flavor it is.
+        ...(flavor === undefined ? {} : { LSEnvironment: { T3CODE_DESKTOP_FLAVOR: flavor } }),
         // macOS 26 offers Messages/Mail codes in every text field unless opted out.
         NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac: true,
         NSLocalNetworkUsageDescription:
@@ -2844,17 +2880,21 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
           },
         ],
       },
-      protocols: [
-        {
-          name: "T3 Code",
-          schemes: ["t3code", "t3code-dev"],
-        },
-        {
-          name: "Web site URL",
-          schemes: ["http", "https"],
-          role: "Viewer",
-        },
-      ],
+      // A flavored build claims no links or documents; the official app keeps them.
+      protocols:
+        flavor === undefined
+          ? [
+              {
+                name: "T3 Code",
+                schemes: ["t3code", "t3code-dev"],
+              },
+              {
+                name: "Web site URL",
+                schemes: ["http", "https"],
+                role: "Viewer",
+              },
+            ]
+          : [],
       ...(signed ? { sign: path.join(repoRoot, "scripts/sign-macos.ts") } : {}),
       ...(macPasskeySigning
         ? {
@@ -2868,7 +2908,7 @@ export const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   if (platform === "mac" && target === "dmg") {
     buildConfig.dmg = {
       // Finder caches DMG backgrounds by volume name; give each installer its own.
-      title: `${resolveDesktopProductName(version)} ${version} Installer`,
+      title: `${resolveDesktopProductName(version, flavor)} ${version} Installer`,
       background: `dmg/dmg-background-${updateChannel}.png`,
       window: {
         width: 640,
@@ -3852,7 +3892,8 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
       ? path.join(stageAppDir, WINDOWS_SERVER_RESOURCE_SOURCE_DIR, WINDOWS_SERVER_ASAR_RESOURCE)
       : undefined;
   const stagePackageJson: StagePackageJson = {
-    name: "t3code",
+    // Chromium names the keychain "safe storage" item after this; a flavor keeps its own.
+    name: options.flavor === undefined ? "t3code" : `t3code-${options.flavor}`,
     version: appVersion,
     buildVersion: appVersion,
     t3codeCommitHash: commitHash,
@@ -3881,6 +3922,7 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
         : undefined,
       bundlesWslRuntime({ platform: options.platform, runtimeArchivePath: options.wslRuntime }),
       options.arch,
+      options.flavor,
     ),
     dependencies: stageDependencies,
     devDependencies: {
@@ -4175,6 +4217,12 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
   wslRuntime: Flag.String("wsl-runtime").pipe(
     Flag.withDescription(
       "Path to the Linux CLI release archive (t3-<version>-linux-x64.tar.gz) to embed as the WSL runtime of a Windows build (env: T3CODE_DESKTOP_WSL_RUNTIME).",
+    ),
+    Flag.optional,
+  ),
+  flavor: Flag.String("flavor").pipe(
+    Flag.withDescription(
+      "Build a personal flavor, for example rail, that installs beside the official app with its own name, bundle id, ~/.t3-<flavor> state and browser profile, and never auto-updates (env: T3CODE_DESKTOP_FLAVOR).",
     ),
     Flag.optional,
   ),

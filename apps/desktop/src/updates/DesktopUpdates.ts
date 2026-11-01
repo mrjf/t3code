@@ -322,7 +322,12 @@ function getAutoUpdateDisabledReason(args: {
   isDebPackage: boolean;
   disabledByEnv: boolean;
   hasUpdateFeedConfig: boolean;
+  flavor?: string | undefined;
 }): string | null {
+  if (args.flavor !== undefined) {
+    // The release feed would replace a flavored build with the official app.
+    return `This ${args.flavor} build is updated by rebuilding it from source.`;
+  }
   if (!args.hasUpdateFeedConfig) {
     return "Automatic updates are not available because no update feed is configured.";
   }
@@ -445,6 +450,7 @@ export const make = Effect.gen(function* () {
         isDebPackage,
         disabledByEnv: config.disableAutoUpdate,
         hasUpdateFeedConfig: hasFeedConfig,
+        flavor: Option.getOrUndefined(environment.flavor),
       }),
     );
   });
