@@ -36,10 +36,12 @@ You are keeping the `project-rail` branch of this fork current with upstream
 5. Run `node_modules/.bin/vp run check:changed` and fix what it finds. Also run the tests
    nearest the conflicts, for example `node_modules/.bin/vp test run <files>`. Use the
    repo-local `vp`: the global one fails this repo's tests with "reading 'config'".
-6. Run `fork/sync-upstream.sh --install`. It pushes the branch to the `fork` remote and
-   rebuilds and reinstalls the Rail app. If the build fails, fix it, commit, and run it again.
+6. Run `fork/sync-upstream.sh --build`. It pushes the branch to the `fork` remote and rebuilds
+   the Rail app into `release/`. If the build fails, fix it, commit, and run it again. Never
+   install: that quits the running app and interrupts Russell's work, so it happens only when
+   Russell runs it.
 7. Report: upstream commits merged, files that conflicted and how each was resolved, check
-   results, and whether the app was reinstalled.
+   results, and that the build is ready to install with `fork/install-mac.sh --skip-build`.
 
 Run checks and tests with `env -u T3CODE_DESKTOP_FLAVOR -u ELECTRON_RUN_AS_NODE -u T3CODE_HOME`,
 because a shell inside T3 Code inherits those and they change test results. A test that
@@ -48,9 +50,6 @@ before fixing. As of 2026-11-01 these fail on upstream too on this Mac:
 `DesktopLinuxUrlHandler`, `ServerEnvironment`, `externalLauncher`, `AgentSessionScanner`,
 `UsageService` and `GitVcsDriverCore`. Upstream tests that render a mobile component using
 `useWorkspaceProjects` need that hook mocked.
-
-`install-mac.sh` exits 3 when it runs inside the Rail app, which cannot replace itself. That
-is not a failure of the sync: report that the build is ready and needs installing.
 
 Rules: never push to `origin`. Never open a pull request. Never force-push. Commit messages
 are conventional commits ending with the attribution line your session specifies.

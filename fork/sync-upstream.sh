@@ -2,7 +2,11 @@
 # Merge upstream main into this fork's branch and push the branch to the fork.
 #
 #   fork/sync-upstream.sh            merge and push
-#   fork/sync-upstream.sh --install  also rebuild and reinstall the Rail app after a clean merge
+#   fork/sync-upstream.sh --build    also rebuild the Rail app after a clean merge
+#
+# This never installs, because installing quits the running app. Install by hand with
+# fork/install-mac.sh --skip-build. --install is an old name for --build, kept because the
+# scheduled sync task in T3 Code (Beta) still passes it.
 #
 # Exit codes: 0 merged (or nothing to merge), 2 merge conflicts left in progress, 1 other failure.
 set -eu
@@ -11,10 +15,10 @@ repo=$(cd "$(dirname "$0")/.." && pwd)
 branch=project-rail
 upstream=origin
 fork=fork
-install=0
+build=0
 for arg in "$@"; do
   case "$arg" in
-    --install) install=1 ;;
+    --build|--install) build=1 ;;
     *) echo "unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
@@ -50,6 +54,6 @@ fi
 
 git push "$fork" "$branch"
 
-if [ "$install" = "1" ]; then
-  exec "$repo/fork/install-mac.sh"
+if [ "$build" = "1" ]; then
+  exec "$repo/fork/install-mac.sh" --build-only
 fi

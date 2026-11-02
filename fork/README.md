@@ -18,13 +18,20 @@ Build the app and install it into `/Applications`, relaunching it if it was open
 fork/install-mac.sh
 ```
 
+Install the latest finished build without rebuilding, from Terminal or T3 Code (Beta):
+
+```sh
+fork/install-mac.sh --skip-build
+```
+
 Pull in upstream, merge it into this branch, and push the result to the fork:
 
 ```sh
 fork/sync-upstream.sh
 ```
 
-Add `--install` to rebuild and reinstall after a clean merge. The script stops with exit
+Add `--build` to rebuild the app after a clean merge. It never installs, so the running app
+is left alone until you choose to install. The script stops with exit
 code 2 and leaves the merge in progress when there are conflicts; resolve them (or hand the
 conflict to an agent with `fork/UPSTREAM-SYNC.md`), commit, and run it again.
 
@@ -41,4 +48,4 @@ flavors"); the feature code is identical to a plain build. The `t3` command for 
 
 Automatic updates are off in a flavored build. Upstream releases arrive through
 `sync-upstream.sh`, which a scheduled T3 Code task runs every morning with an agent to
-resolve conflicts.
+resolve conflicts. The task builds and pushes; you install.

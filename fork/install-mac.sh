@@ -3,9 +3,10 @@
 #
 #   fork/install-mac.sh               build, then install
 #   fork/install-mac.sh --skip-build  install the zip already in release/
+#   fork/install-mac.sh --build-only  build the zip and stop; the running app is not touched
 #
-# The app is quit if it is running and relaunched afterwards. Its data lives in ~/.t3-rail
-# and is untouched.
+# Installing quits the app if it is running and relaunches it afterwards, so only do that when
+# Russell asks. Its data lives in ~/.t3-rail and is untouched.
 set -eu
 
 # A shell spawned by T3 Code itself carries this, and `open` forwards it, which makes the new
@@ -18,12 +19,19 @@ app_name="T3 Code (Rail)"
 bundle_id="com.t3tools.t3code.$flavor"
 destination="/Applications/$app_name.app"
 skip_build=0
+build_only=0
 for arg in "$@"; do
   case "$arg" in
     --skip-build) skip_build=1 ;;
+    --build-only) build_only=1 ;;
     *) echo "unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
+
+if [ "$skip_build" = "1" ] && [ "$build_only" = "1" ]; then
+  echo "install-mac: --skip-build and --build-only together do nothing" >&2
+  exit 1
+fi
 
 cd "$repo"
 
@@ -42,6 +50,11 @@ zip=$(ls -t "$repo"/release/T3-Code-"$flavor"-*-arm64.zip 2>/dev/null | head -n 
 if [ -z "$zip" ]; then
   echo "install-mac: no release/T3-Code-$flavor-*-arm64.zip to install" >&2
   exit 1
+fi
+
+if [ "$build_only" = "1" ]; then
+  echo "install-mac: built $zip. Install it when ready with: $repo/fork/install-mac.sh --skip-build"
+  exit 0
 fi
 
 stage=$(mktemp -d)
