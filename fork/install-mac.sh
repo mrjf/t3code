@@ -53,11 +53,12 @@ if [ ! -d "$built" ]; then
   exit 1
 fi
 
-# A shell inside the Rail app dies with it, so quitting it here would strand the install.
-if [ "${T3CODE_DESKTOP_FLAVOR:-}" = "$flavor" ] &&
-  pgrep -f "$destination/Contents/MacOS/" >/dev/null 2>&1; then
+# The Rail app sets this for everything it spawns, and a shell inside the app dies with it, so
+# quitting the app here would strand the install. Do not probe for the process: pgrep can see
+# nothing from a sandboxed shell.
+if [ "${T3CODE_DESKTOP_FLAVOR:-}" = "$flavor" ]; then
   echo "install-mac: running inside $app_name, which cannot replace itself." >&2
-  echo "install-mac: the build is ready. Quit $app_name and run from Terminal or T3 Code (Beta):" >&2
+  echo "install-mac: the build is ready. Run this from Terminal or T3 Code (Beta):" >&2
   echo "  $repo/fork/install-mac.sh --skip-build" >&2
   exit 3
 fi
@@ -68,7 +69,7 @@ if osascript -e "tell application id \"$bundle_id\" to if it is running then ret
   echo "install-mac: quitting $app_name"
   osascript -e "tell application id \"$bundle_id\" to quit" || true
   tries=0
-  while pgrep -f "$destination/Contents/MacOS/" >/dev/null 2>&1; do
+  while ps -axo command= | grep -F "$destination/Contents/MacOS/" | grep -qv grep; do
     tries=$((tries + 1))
     if [ "$tries" -gt 60 ]; then
       echo "install-mac: $app_name did not quit" >&2

@@ -53,5 +53,5 @@ before fixing. As of 2026-11-01 these fail on upstream too on this Mac:
 is not a failure of the sync: report that the build is ready and needs installing.
 
 Rules: never push to `origin`. Never open a pull request. Never force-push. Commit messages
-are conventional commits ending with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
+are conventional commits ending with the attribution line your session specifies.
 Do not run a server against `~/.t3/userdata`; the Rail app uses `~/.t3-rail`.
