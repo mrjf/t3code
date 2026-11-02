@@ -41,6 +41,17 @@ You are keeping the `project-rail` branch of this fork current with upstream
 7. Report: upstream commits merged, files that conflicted and how each was resolved, check
    results, and whether the app was reinstalled.
 
+Run checks and tests with `env -u T3CODE_DESKTOP_FLAVOR -u ELECTRON_RUN_AS_NODE -u T3CODE_HOME`,
+because a shell inside T3 Code inherits those and they change test results. A test that
+fails is only the fork's problem if it passes on a clean `origin/main` checkout, so compare
+before fixing. As of 2026-11-01 these fail on upstream too on this Mac:
+`DesktopLinuxUrlHandler`, `ServerEnvironment`, `externalLauncher`, `AgentSessionScanner`,
+`UsageService` and `GitVcsDriverCore`. Upstream tests that render a mobile component using
+`useWorkspaceProjects` need that hook mocked.
+
+`install-mac.sh` exits 3 when it runs inside the Rail app, which cannot replace itself. That
+is not a failure of the sync: report that the build is ready and needs installing.
+
 Rules: never push to `origin`. Never open a pull request. Never force-push. Commit messages
 are conventional commits ending with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`.
 Do not run a server against `~/.t3/userdata`; the Rail app uses `~/.t3-rail`.

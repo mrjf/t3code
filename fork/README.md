@@ -28,7 +28,7 @@ Add `--install` to rebuild and reinstall after a clean merge. The script stops w
 code 2 and leaves the merge in progress when there are conflicts; resolve them (or hand the
 conflict to an agent with `fork/UPSTREAM-SYNC.md`), commit, and run it again.
 
-Both scripts expect the Node version from `package.json` through nvm and `vp` on PATH. Run
+Both scripts expect the Node version from `package.json` through nvm. Run
 tests and `check:changed` with the repo-local `node_modules/.bin/vp`; the global `vp` fails
 this repo's tests with "Cannot read properties of undefined (reading 'config')".
 

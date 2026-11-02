@@ -33,7 +33,7 @@ if [ "$skip_build" = "0" ]; then
     . "$HOME/.nvm/nvm.sh"
     nvm use "$(node -e 'console.log(require("./package.json").engines.node)')" >/dev/null
   fi
-  vp i --frozen-lockfile
+  node_modules/.bin/vp i --frozen-lockfile
   # The repo-local vp; the global one may pair with a different vitest and vite.
   node_modules/.bin/vp run dist:desktop:dmg --flavor "$flavor"
 fi
@@ -51,6 +51,15 @@ built="$stage/$app_name.app"
 if [ ! -d "$built" ]; then
   echo "install-mac: $zip did not contain $app_name.app" >&2
   exit 1
+fi
+
+# A shell inside the Rail app dies with it, so quitting it here would strand the install.
+if [ "${T3CODE_DESKTOP_FLAVOR:-}" = "$flavor" ] &&
+  pgrep -f "$destination/Contents/MacOS/" >/dev/null 2>&1; then
+  echo "install-mac: running inside $app_name, which cannot replace itself." >&2
+  echo "install-mac: the build is ready. Quit $app_name and run from Terminal or T3 Code (Beta):" >&2
+  echo "  $repo/fork/install-mac.sh --skip-build" >&2
+  exit 3
 fi
 
 was_running=0
