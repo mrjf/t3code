@@ -38,8 +38,8 @@ import {
   useActiveAppWorkspace,
   useAppWorkspaces,
   useSetActiveAppWorkspace,
+  useWorkspaceProjects,
 } from "../workspaces/useAppWorkspaces";
-import { filterProjectsToWorkspace } from "@t3tools/client-runtime/state/workspaces";
 
 export function HomeRouteScreen() {
   const nativePrimaryColumn = use(NativePrimaryColumnContext);
@@ -50,7 +50,7 @@ export function HomeRouteScreen() {
   const workspaces = useAppWorkspaces();
   const activeWorkspace = useActiveAppWorkspace();
   const setActiveWorkspace = useSetActiveAppWorkspace();
-  const projects = filterProjectsToWorkspace(useProjects(), activeWorkspace);
+  const projects = useWorkspaceProjects(useProjects());
   const changeWorkspace = (workspaceId: string | null) => {
     setActiveWorkspace(workspaces.find((workspace) => workspace.id === workspaceId) ?? null);
     setSelectedProjectKey(null);

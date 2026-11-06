@@ -260,7 +260,7 @@ const SETTINGS_SCREENS = {
   SettingsWorkspaces: createNativeStackScreen({
     screen: SettingsWorkspacesRouteScreen,
     linking: "settings/workspaces",
-    options: { ...SETTINGS_PAGE_OPTIONS, title: "Workspaces" },
+    options: settingsPage("Workspaces"),
   }),
   SettingsProjectOverview: createNativeStackScreen({
     screen: SettingsProjectOverviewRouteScreen,
