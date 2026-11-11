@@ -45,7 +45,10 @@ import { deadlineAfter, deadlineStore, type ClockStore } from "@t3tools/client-r
 import { useDeadlinePassed } from "../hooks/useDeadline";
 import { legacyProjectCwdPreferenceKey } from "../uiStateStore";
 import { isElectron } from "../env";
-import { shouldShowThreadJumpHintsForModifiers } from "../keybindings";
+import {
+  shouldShowThreadJumpHintsForModifiers,
+  shouldShowWorkspaceJumpHintsForModifiers,
+} from "../keybindings";
 import { isTerminalFocused, subscribeToTerminalFocusChanges } from "../lib/terminalFocus";
 import { isPreviewFocused } from "../lib/previewFocus";
 import { isModelPickerOpen, subscribeToModelPickerVisibility } from "../modelPickerVisibility";
@@ -774,6 +777,28 @@ export function useThreadJumpHintsVisible(
       shouldShowThreadJumpHintsForModifiers(shortcutModifierStore.getSnapshot(), keybindings, {
         platform: navigator.platform,
         context: threadShortcutContext(routeThreadRef),
+      }),
+  );
+}
+
+function subscribeToWorkspaceJumpHintInputs(listener: () => void): () => void {
+  const unsubscribeHold = threadJumpModifierHold.subscribe(listener);
+  const unsubscribeFocus = subscribeToTerminalFocusChanges(listener);
+  return () => {
+    unsubscribeHold();
+    unsubscribeFocus();
+  };
+}
+
+/** The workspace rail's hold-to-show badges, on the same hold delay as thread jump hints. */
+export function useWorkspaceJumpHintsVisible(keybindings: ResolvedKeybindingsConfig): boolean {
+  return React.useSyncExternalStore(
+    subscribeToWorkspaceJumpHintInputs,
+    () =>
+      threadJumpModifierHold.getSnapshot() &&
+      shouldShowWorkspaceJumpHintsForModifiers(shortcutModifierStore.getSnapshot(), keybindings, {
+        platform: navigator.platform,
+        context: { terminalFocus: isTerminalFocused() },
       }),
   );
 }

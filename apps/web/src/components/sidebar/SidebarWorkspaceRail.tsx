@@ -5,17 +5,14 @@ import { useEffect, type MouseEvent as ReactMouseEvent, type ReactNode } from "r
 
 import { isCommandPaletteOpen } from "../../commandPaletteBus";
 import { useStableCallback } from "../../hooks/useStableCallback";
-import { useTerminalFocus } from "../../hooks/useTerminalFocus";
 import {
   resolveShortcutCommand,
-  shouldShowWorkspaceJumpHintsForModifiers,
   workspaceJumpHintForIndex,
   workspaceJumpIndexFromCommand,
 } from "../../keybindings";
 import { isTerminalFocused } from "../../lib/terminalFocus";
-import { useShortcutModifierState } from "../../shortcutModifierState";
 import { primaryServerKeybindingsAtom } from "../../state/server";
-import { useThreadJumpHintsVisible } from "../Sidebar.logic";
+import { useWorkspaceJumpHintsVisible } from "../Sidebar.logic";
 
 import { SidebarMenuButton } from "../ui/sidebar";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -92,8 +89,6 @@ function useWorkspaceJumpShortcuts(
   onJump: (workspace: Workspace) => void,
 ): ReadonlyArray<string | null> | null {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
-  const modifiers = useShortcutModifierState();
-  const terminalFocused = useTerminalFocus();
   const jump = useStableCallback((event: KeyboardEvent) => {
     if (event.defaultPrevented || event.repeat || isCommandPaletteOpen()) return;
     const command = resolveShortcutCommand(event, keybindings, {
@@ -112,13 +107,10 @@ function useWorkspaceJumpShortcuts(
     window.addEventListener("keydown", jump);
     return () => window.removeEventListener("keydown", jump);
   }, [jump]);
-  const options = { platform: navigator.platform, context: { terminalFocus: terminalFocused } };
-  const visible = useThreadJumpHintsVisible(
-    shouldShowWorkspaceJumpHintsForModifiers(modifiers, keybindings, options),
-  );
-  return visible
-    ? workspaces.map((_, index) => workspaceJumpHintForIndex(keybindings, index, options))
-    : null;
+  const visible = useWorkspaceJumpHintsVisible(keybindings);
+  if (!visible) return null;
+  const options = { platform: navigator.platform, context: { terminalFocus: isTerminalFocused() } };
+  return workspaces.map((_, index) => workspaceJumpHintForIndex(keybindings, index, options));
 }
 
 /** Choosing a workspace scopes the whole app to its projects. */
