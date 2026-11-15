@@ -3,7 +3,7 @@ import { ChevronDownIcon } from "lucide-react";
 
 import { ProjectFavicon } from "../ProjectFavicon";
 import { ProjectSwitcherMenu } from "../ProjectSwitcherMenu";
-import { WorkspaceBreadcrumbText } from "../WorkspaceBreadcrumb";
+import { MiddleTruncate } from "../ui/middle-truncate";
 
 export function ProjectSwitcherBreadcrumb(props: {
   activeProject: EnvironmentProject;
@@ -23,9 +23,12 @@ export function ProjectSwitcherBreadcrumb(props: {
       }
     >
       <ProjectFavicon project={props.activeProject} className="size-3.5" />
-      <WorkspaceBreadcrumbText className="max-w-40">
-        {props.activeProjectName}
-      </WorkspaceBreadcrumbText>
+      <MiddleTruncate
+        data-slot="workspace-breadcrumb-text"
+        value={props.activeProjectName ?? ""}
+        showTitle={false}
+        variant="cap-aligned"
+      />
       <ChevronDownIcon className="size-3 shrink-0" />
     </ProjectSwitcherMenu>
   );
