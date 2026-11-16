@@ -33,7 +33,6 @@ const SETTINGS_SEARCH_TERMS = {
     "zen",
     "final answers only",
   ],
-  SettingsLanguage: ["language", "locale", "translation", "english"],
   SettingsNavigation: ["tabs", "tab order", "reorder", "hide tabs"],
   SettingsKeyboard: ["return key", "send message", "new line", "hardware keyboard"],
   SettingsVoice: [
@@ -54,6 +53,10 @@ const SETTINGS_SEARCH_TERMS = {
   SettingsProjectOverview: ["project", "overview", "checkouts", "delete project"],
   SettingsWorkspaces: ["workspace", "workspaces", "personal", "work", "group projects", "theme"],
   SettingsOrganization: [
+    "language",
+    "locale",
+    "translation",
+    "english",
     "project grouping",
     "group projects",
     "organization",
