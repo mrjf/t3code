@@ -1,5 +1,6 @@
 import { useAtomValue } from "@effect/atom-react";
 import type { Workspace } from "@t3tools/contracts";
+import { useGT } from "gt-react";
 import { LayersIcon, PlusIcon } from "lucide-react";
 import { useEffect, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 
@@ -122,15 +123,16 @@ export function SidebarWorkspaceRail(props: {
   onWorkspaceContextMenu: (workspace: Workspace, position: { x: number; y: number }) => void;
   onAddWorkspace: () => void;
 }) {
+  const gt = useGT();
   const jumpHints = useWorkspaceJumpShortcuts(props.workspaces, props.onSelect);
   return (
     <div className="flex w-12 shrink-0 flex-col items-center border-r border-sidebar-border">
       <ul
-        aria-label="Workspaces"
+        aria-label={gt("Workspaces")}
         className="flex w-full min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto scrollbar-gutter-both py-2"
       >
         <RailButton
-          label="All projects"
+          label={gt("All projects")}
           selected={props.activeWorkspaceId === null}
           onClick={() => props.onSelect(null)}
         >
@@ -159,7 +161,7 @@ export function SidebarWorkspaceRail(props: {
             <WorkspaceGlyph workspace={workspace} />
           </RailButton>
         ))}
-        <RailButton label="New workspace" onClick={props.onAddWorkspace}>
+        <RailButton label={gt("New workspace")} onClick={props.onAddWorkspace}>
           <PlusIcon />
         </RailButton>
       </ul>

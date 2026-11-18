@@ -11,6 +11,7 @@ import {
   type WorkspaceMember,
 } from "@t3tools/contracts";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
+import { useGT } from "gt-react-native";
 import { useState } from "react";
 import { View } from "react-native";
 
@@ -82,6 +83,7 @@ function appearanceFromDraft(draft: Draft, previous: WorkspaceAppearance | null)
 }
 
 export function SettingsWorkspacesRouteScreen() {
+  const gt = useGT();
   const workspaces = useAppWorkspaces();
   const active = useActiveAppWorkspace();
   const setActive = useSetActiveAppWorkspace();
@@ -90,24 +92,26 @@ export function SettingsWorkspacesRouteScreen() {
   const editingWorkspace = workspaces.find((workspace) => workspace.id === editing) ?? null;
 
   return (
-    <SettingsScreen title="Workspaces">
+    <SettingsScreen title={gt("Workspaces")}>
       <SettingsSection
-        title="Workspaces"
-        footer="A workspace is a named set of projects, such as Personal and Work, saved on every connected environment. Switch between them from the thread list."
+        title={gt("Workspaces")}
+        footer={gt(
+          "A workspace is a named set of projects, such as Personal and Work, saved on every connected environment. Switch between them from the thread list.",
+        )}
       >
         {workspaces.map((workspace) => (
           <ListRow
             key={workspace.id}
             icon="square.grid.2x2"
             label={`${workspace.icon ? `${workspace.icon} ` : ""}${workspace.name}`}
-            description={
-              workspace.members.length === 1 ? "1 project" : `${workspace.members.length} projects`
-            }
-            detail={active?.id === workspace.id ? "Active" : undefined}
+            description={gt("{count, plural, one {{count} project} other {{count} projects}}", {
+              count: workspace.members.length,
+            })}
+            detail={active?.id === workspace.id ? gt("Active") : undefined}
             onPress={() => setEditing(workspace.id)}
           />
         ))}
-        <ListActionRow icon="plus" label="New workspace" onPress={() => setEditing("new")} />
+        <ListActionRow icon="plus" label={gt("New workspace")} onPress={() => setEditing("new")} />
       </SettingsSection>
       {editing !== null ? (
         <WorkspaceEditor
@@ -128,6 +132,7 @@ function WorkspaceEditor(props: {
   readonly onActivate: () => void;
   readonly onDone: () => void;
 }) {
+  const gt = useGT();
   const { workspace } = props;
   const { upsert, remove } = useSaveAppWorkspaces();
   const workspaces = useAppWorkspaces();
@@ -162,7 +167,7 @@ function WorkspaceEditor(props: {
     });
     setSaving(false);
     if (saved.failures.length > 0) {
-      Dialog.alert("Could not save workspace", saved.failures.join("\n\n"));
+      Dialog.alert(gt("Could not save workspace"), saved.failures.join("\n\n"));
     }
     if (saved.saved) props.onDone();
   };
@@ -184,39 +189,43 @@ function WorkspaceEditor(props: {
 
   return (
     <>
-      <SettingsSection title={workspace ? "Edit workspace" : "New workspace"}>
+      <SettingsSection title={workspace ? gt("Edit workspace") : gt("New workspace")}>
         <View className="gap-3 p-4">
-          <Text className="text-sm font-t3-medium text-foreground-muted">Name</Text>
+          <Text className="text-sm font-t3-medium text-foreground-muted">{gt("Name")}</Text>
           <AppTextInput
-            accessibilityLabel="Workspace name"
+            accessibilityLabel={gt("Workspace name")}
             className="min-h-11 rounded-xl border-continuous bg-card px-3 text-base text-foreground"
             value={draft.name}
             maxLength={WORKSPACE_NAME_MAX_LENGTH}
-            placeholder="Work"
+            placeholder={gt("Work", { $context: "example workspace name" })}
             onChangeText={(value) => patch({ name: value })}
           />
           {nameTaken ? (
-            <Text className="text-sm text-destructive">A workspace with this name exists.</Text>
+            <Text className="text-sm text-destructive">
+              {gt("A workspace with this name exists.")}
+            </Text>
           ) : null}
-          <Text className="text-sm font-t3-medium text-foreground-muted">Icon</Text>
+          <Text className="text-sm font-t3-medium text-foreground-muted">{gt("Icon")}</Text>
           <AppTextInput
-            accessibilityLabel="Workspace icon"
+            accessibilityLabel={gt("Workspace icon")}
             className="min-h-11 rounded-xl border-continuous bg-card px-3 text-base text-foreground"
             value={draft.icon}
             maxLength={8}
-            placeholder="An emoji"
+            placeholder={gt("An emoji")}
             onChangeText={(value) => patch({ icon: value })}
           />
         </View>
       </SettingsSection>
 
       <SettingsSection
-        title="Projects"
-        footer="A project is in the workspace on every machine that has a checkout of its repository."
+        title={gt("Projects")}
+        footer={gt(
+          "A project is in the workspace on every machine that has a checkout of its repository.",
+        )}
       >
         {groups.length === 0 ? (
           <View className="p-4">
-            <Text className="text-sm text-foreground-muted">Add a project first.</Text>
+            <Text className="text-sm text-foreground-muted">{gt("Add a project first.")}</Text>
           </View>
         ) : (
           groups.map((group) => (
@@ -240,11 +249,11 @@ function WorkspaceEditor(props: {
       </SettingsSection>
 
       <SettingsSection
-        title="Theme"
-        footer="With My theme, the colors below tint your own theme instead."
+        title={gt("Theme")}
+        footer={gt("With My theme, the colors below tint your own theme instead.")}
       >
         <ListChoiceRow
-          label="My theme"
+          label={gt("My theme")}
           selected={draft.theme === USER_THEME}
           onPress={() => patch({ theme: USER_THEME })}
         />
@@ -258,15 +267,15 @@ function WorkspaceEditor(props: {
         ))}
       </SettingsSection>
 
-      <SettingsSection title="Colors">
+      <SettingsSection title={gt("Colors")}>
         <View className="gap-3 p-4">
           <View className="flex-row gap-3">
-            {colorField("Light background", "lightBackground")}
-            {colorField("Light accent", "lightAccent")}
+            {colorField(gt("Light background"), "lightBackground")}
+            {colorField(gt("Light accent"), "lightAccent")}
           </View>
           <View className="flex-row gap-3">
-            {colorField("Dark background", "darkBackground")}
-            {colorField("Dark accent", "darkAccent")}
+            {colorField(gt("Dark background"), "darkBackground")}
+            {colorField(gt("Dark accent"), "darkAccent")}
           </View>
         </View>
       </SettingsSection>
@@ -274,27 +283,27 @@ function WorkspaceEditor(props: {
       <SettingsSection>
         <View className="flex-row flex-wrap gap-3 p-4">
           <Button
-            label={workspace ? "Save" : "Create"}
-            accessibilityHint="Save the workspace on every connected environment"
+            label={workspace ? gt("Save") : gt("Create")}
+            accessibilityHint={gt("Save the workspace on every connected environment")}
             disabled={!canSave}
             onPress={() => void save()}
           />
           {workspace && !props.isActive ? (
-            <Button label="Switch to it" tone="secondary" onPress={props.onActivate} />
+            <Button label={gt("Switch to it")} tone="secondary" onPress={props.onActivate} />
           ) : null}
-          <Button label="Cancel" tone="secondary" onPress={props.onDone} />
+          <Button label={gt("Cancel")} tone="secondary" onPress={props.onDone} />
         </View>
         {workspace ? (
           <ListActionRow
             icon="trash"
-            label="Delete workspace"
-            description="Projects and threads stay; only the grouping goes."
+            label={gt("Delete workspace")}
+            description={gt("Projects and threads stay; only the grouping goes.")}
             tone="danger"
             disabled={saving}
             onPress={() => {
               void remove(workspace.id).then((outcome) => {
                 if (outcome.failures.length > 0) {
-                  Dialog.alert("Could not delete workspace", outcome.failures.join("\n\n"));
+                  Dialog.alert(gt("Could not delete workspace"), outcome.failures.join("\n\n"));
                 }
                 if (outcome.saved) props.onDone();
               });

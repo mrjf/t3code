@@ -6,6 +6,7 @@ import {
   type WorkspaceMember,
 } from "@t3tools/contracts";
 import { BUILT_IN_THEMES } from "@t3tools/shared/themePalettes";
+import { T, useGT } from "gt-react";
 import { useId, useState } from "react";
 import { create } from "zustand";
 
@@ -111,6 +112,7 @@ export function WorkspaceDialogHost() {
 }
 
 function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
+  const gt = useGT();
   const id = useId();
   const close = useWorkspaceDialogStore((store) => store.close);
   const { upsert, remove } = useSaveWorkspaces();
@@ -146,7 +148,7 @@ function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
       <div className="flex items-center gap-2">
         <input
           type="color"
-          aria-label={`${label} swatch`}
+          aria-label={gt("{label} swatch", { label })}
           className="size-8 shrink-0 cursor-pointer rounded-md border border-input bg-transparent p-0.5"
           value={HEX_COLOR.test(draft[key] as string) ? (draft[key] as string) : "#808080"}
           onChange={(event) => patch({ [key]: event.target.value })}
@@ -179,21 +181,25 @@ function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
           }}
         >
           <DialogHeader>
-            <DialogTitle>{workspace ? "Edit workspace" : "New workspace"}</DialogTitle>
+            <DialogTitle>{workspace ? gt("Edit workspace") : gt("New workspace")}</DialogTitle>
             <DialogDescription>
-              A workspace groups projects across your machines and can bring its own look. It is
-              saved on every connected environment.
+              <T>
+                A workspace groups projects across your machines and can bring its own look. It is
+                saved on every connected environment.
+              </T>
             </DialogDescription>
           </DialogHeader>
           <DialogPanel>
             <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor={`${id}-name`}>Name</Label>
+                <Label htmlFor={`${id}-name`}>
+                  <T>Name</T>
+                </Label>
                 <Input
                   id={`${id}-name`}
                   value={draft.name}
                   maxLength={WORKSPACE_NAME_MAX_LENGTH}
-                  placeholder="Work"
+                  placeholder={gt("Work", { $context: "example workspace name" })}
                   autoFocus
                   autoComplete="off"
                   aria-invalid={nameTaken || undefined}
@@ -201,17 +207,19 @@ function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
                 />
                 {nameTaken ? (
                   <span className="text-destructive text-xs">
-                    A workspace with this name exists.
+                    <T>A workspace with this name exists.</T>
                   </span>
                 ) : null}
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor={`${id}-icon`}>Icon</Label>
+                <Label htmlFor={`${id}-icon`}>
+                  <T>Icon</T>
+                </Label>
                 <Input
                   id={`${id}-icon`}
                   value={draft.icon}
                   maxLength={8}
-                  placeholder="emoji"
+                  placeholder={gt("emoji", { $context: "workspace icon placeholder" })}
                   autoComplete="off"
                   onChange={(event) => patch({ icon: event.target.value })}
                 />
@@ -219,9 +227,13 @@ function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>Projects</Label>
+              <Label>
+                <T>Projects</T>
+              </Label>
               {groups.length === 0 ? (
-                <span className="text-muted-foreground text-xs">Add a project first.</span>
+                <span className="text-muted-foreground text-xs">
+                  <T>Add a project first.</T>
+                </span>
               ) : (
                 <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border border-input p-1.5">
                   {groups.map((group) => {
@@ -249,28 +261,32 @@ function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
                 </ul>
               )}
               <span className="text-muted-foreground text-xs">
-                A project is in the workspace on every machine that has a checkout of its
-                repository.
+                <T>
+                  A project is in the workspace on every machine that has a checkout of its
+                  repository.
+                </T>
               </span>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>Theme</Label>
+              <Label>
+                <T>Theme</T>
+              </Label>
               <Select
                 value={draft.theme}
                 onValueChange={(value) => {
                   if (value) patch({ theme: value });
                 }}
                 items={[
-                  { value: USER_THEME, label: "My theme" },
+                  { value: USER_THEME, label: gt("My theme") },
                   ...BUILT_IN_THEMES.map((theme) => ({ value: theme.id, label: theme.label })),
                 ]}
               >
-                <SelectTrigger size="sm" aria-label="Workspace theme">
+                <SelectTrigger size="sm" aria-label={gt("Workspace theme")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectPopup>
-                  <SelectItem value={USER_THEME}>My theme</SelectItem>
+                  <SelectItem value={USER_THEME}>{gt("My theme")}</SelectItem>
                   {BUILT_IN_THEMES.map((theme) => (
                     <SelectItem key={theme.id} value={theme.id}>
                       {theme.label}
@@ -279,34 +295,40 @@ function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
                 </SelectPopup>
               </Select>
               <span className="text-muted-foreground text-xs">
-                With <strong>My theme</strong>, the colors below tint your own theme instead.
+                <T>
+                  With <strong>My theme</strong>, the colors below tint your own theme instead.
+                </T>
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              {colorField("Light background", "lightBackground")}
-              {colorField("Light accent", "lightAccent")}
-              {colorField("Dark background", "darkBackground")}
-              {colorField("Dark accent", "darkAccent")}
+              {colorField(gt("Light background"), "lightBackground")}
+              {colorField(gt("Light accent"), "lightAccent")}
+              {colorField(gt("Dark background"), "darkBackground")}
+              {colorField(gt("Dark accent"), "darkAccent")}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor={`${id}-font`}>Interface font</Label>
+                <Label htmlFor={`${id}-font`}>
+                  <T>Interface font</T>
+                </Label>
                 <Input
                   id={`${id}-font`}
                   value={draft.interfaceFont}
-                  placeholder="Inter, system-ui"
+                  placeholder={gt("Inter, system-ui", { $context: "example font stack" })}
                   autoComplete="off"
                   onChange={(event) => patch({ interfaceFont: event.target.value })}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor={`${id}-code-font`}>Code font</Label>
+                <Label htmlFor={`${id}-code-font`}>
+                  <T>Code font</T>
+                </Label>
                 <Input
                   id={`${id}-code-font`}
                   value={draft.codeFont}
-                  placeholder="JetBrains Mono"
+                  placeholder={gt("JetBrains Mono", { $context: "example font name" })}
                   autoComplete="off"
                   onChange={(event) => patch({ codeFont: event.target.value })}
                 />
@@ -324,14 +346,14 @@ function WorkspaceDialog({ workspace }: { workspace: Workspace | null }) {
                   close();
                 }}
               >
-                Delete workspace
+                <T>Delete workspace</T>
               </Button>
             ) : null}
             <Button type="button" variant="outline" onClick={close}>
-              Cancel
+              <T>Cancel</T>
             </Button>
             <Button type="submit" disabled={!canSubmit}>
-              {workspace ? "Save" : "Create"}
+              {workspace ? gt("Save") : gt("Create")}
             </Button>
           </DialogFooter>
         </form>

@@ -7,6 +7,7 @@ import {
   workspaceProjectGroups,
 } from "@t3tools/client-runtime/state/workspaces";
 import type { Workspace, WorkspaceWriteInput } from "@t3tools/contracts";
+import { useGT } from "gt-react";
 
 import type { SidebarProjectSnapshot } from "~/sidebarProjectGrouping";
 import { useServerConfigs } from "~/state/entities";
@@ -40,12 +41,13 @@ export function useWorkspaceProjectGroups(): {
   /** The name of the "every project" entry inside this workspace. */
   readonly label: string;
 } {
+  const gt = useGT();
   const workspace = useActiveWorkspace();
   const groups = pickableProjectGroups(useSidebarProjectGroups());
   return {
     workspace,
     projects: workspace ? workspaceProjectGroups(workspace, groups) : groups,
-    label: workspace ? `All in ${workspace.name}` : "All projects",
+    label: workspace ? gt("All in {workspace}", { workspace: workspace.name }) : gt("All projects"),
   };
 }
 

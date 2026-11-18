@@ -1,3 +1,4 @@
+import { T, Var } from "gt-react";
 import { CheckIcon, LayersIcon, PlusIcon, SettingsIcon, SquarePenIcon } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 
@@ -52,12 +53,14 @@ export function ProjectSwitcherMenu(props: {
         {workspace ? (
           <MenuItem onClick={() => openWorkspaceDialog(workspace)}>
             <SettingsIcon className="size-4" />
-            Edit {workspace.name}
+            <T>
+              Edit <Var>{workspace.name}</Var>
+            </T>
           </MenuItem>
         ) : null}
         <MenuItem onClick={() => openWorkspaceDialog(null)}>
           <PlusIcon className="size-4" />
-          New workspace
+          <T>New workspace</T>
         </MenuItem>
       </MenuPopup>
     </Menu>

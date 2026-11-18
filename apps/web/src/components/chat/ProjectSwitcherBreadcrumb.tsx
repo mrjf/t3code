@@ -1,4 +1,5 @@
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
+import { useGT } from "gt-react";
 import { ChevronDownIcon } from "lucide-react";
 
 import { ProjectFavicon } from "../ProjectFavicon";
@@ -10,14 +11,16 @@ export function ProjectSwitcherBreadcrumb(props: {
   activeProjectName: string | undefined;
   onNewThreadInProject: () => void;
 }) {
+  const gt = useGT();
+  const name = props.activeProjectName ?? gt("Project");
   return (
     <ProjectSwitcherMenu
-      newThreadLabel={`New thread in ${props.activeProjectName}`}
+      newThreadLabel={gt("New thread in {project}", { project: name })}
       onNewThread={props.onNewThreadInProject}
       trigger={
         <button
           type="button"
-          aria-label={`${props.activeProjectName ?? "Project"}, switch project`}
+          aria-label={gt("{name}, switch project", { name })}
           className="inline-flex min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         />
       }
