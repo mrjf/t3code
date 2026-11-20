@@ -1,4 +1,4 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react";
+import { useAtomValue } from "@effect/atom-react";
 import { supportsSharedSettingsSync } from "@t3tools/client-runtime/state/shared-settings";
 import {
   filterProjectsToWorkspace,
@@ -21,7 +21,7 @@ import { AsyncResult } from "effect/reactivity";
 import type { EnvironmentProject } from "@t3tools/client-runtime/state/models";
 import { useServerConfigs } from "../../state/entities";
 import { useEnvironments } from "../../state/environments";
-import { mobilePreferencesAtom, updateMobilePreferencesAtom } from "../../state/preferences";
+import { mobilePreferencesAtom, saveMobilePreferences } from "../../state/preferences";
 import { serverEnvironment } from "../../state/server";
 import { useEnvironmentsWithScope } from "../../state/session";
 import { useAtomCommand } from "../../state/use-atom-command";
@@ -57,8 +57,10 @@ export function useActiveAppWorkspace(): Workspace | null {
 }
 
 export function useSetActiveAppWorkspace() {
-  const save = useAtomSet(updateMobilePreferencesAtom);
-  return (workspace: Workspace | null) => save({ activeWorkspaceId: workspace?.id ?? null });
+  const save = useAtomCommand(saveMobilePreferences);
+  return (workspace: Workspace | null) => {
+    void save({ activeWorkspaceId: workspace?.id ?? null });
+  };
 }
 
 /** The projects the active workspace lists, or every project outside a workspace. */
